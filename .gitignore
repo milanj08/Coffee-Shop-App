@@ -1,0 +1,32 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Virtual environment folders
+venv/
+.venv/
+env/
+.env/
+
+# PyCharm project settings
+.idea/
+
+# Test/coverage/cache files
+.pytest_cache/
+.coverage
+.cache
+
+# Jupyter (if you ever use it)
+.ipynb_checkpoints/
+
+# mypy / type checker cache
+.mypy_cache/
+
+# Logs
+*.log
+
+# Build artifacts
+build/
+dist/
+*.egg-info/
