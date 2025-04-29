@@ -239,3 +239,60 @@ def delete_recipe(recipe_name):
         print(f"Deleted all recipe entries with name '{recipe_name}'")
     except Exception as e:
         print(f"Error deleting recipe: {e}")
+
+# Query all the tables
+def get_all_sales():
+    try:
+        all_sales = Sale.objects.all()  # Retrieves all Sale records
+        return all_sales
+    except Exception as e:
+        print(f"Error retrieving all sales: {e}")
+        return None
+
+def get_all_accounting_entries():
+    try:
+        all_entries = Accounting.objects.all()  # Retrieves all Accounting records
+        return all_entries
+    except Exception as e:
+        print(f"Error retrieving all accounting entries: {e}")
+        return None
+
+def get_all_menu_items():
+    try:
+        all_menu_items = Menu.objects.all()  # Retrieves all Menu records
+        return all_menu_items
+    except Exception as e:
+        print(f"Error retrieving all menu items: {e}")
+        return None
+
+def get_all_employees():
+    try:
+        all_employees = Employee.objects.all()  # Retrieves all Employee records
+        return all_employees
+    except Exception as e:
+        print(f"Error retrieving all employees: {e}")
+        return None
+
+def get_all_inventory_items():
+    try:
+        all_inventory_items = InventoryManagement.objects.all()  # Retrieves all InventoryManagement records
+        return all_inventory_items
+    except Exception as e:
+        print(f"Error retrieving all inventory items: {e}")
+        return None
+
+def get_all_promotions():
+    try:
+        all_promotions = Promotion.objects.all()  # Retrieves all Promotion records
+        return all_promotions
+    except Exception as e:
+        print(f"Error retrieving all promotions: {e}")
+        return None
+
+def get_all_recipes():
+    try:
+        all_recipes = Recipe.objects.all()  # Retrieves all Recipe records
+        return all_recipes
+    except Exception as e:
+        print(f"Error retrieving all recipes: {e}")
+        return None
