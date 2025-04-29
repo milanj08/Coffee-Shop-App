@@ -1,9 +1,10 @@
+//Manger Home Page after login
 import React from "react";
 import { useNavigate } from 'react-router-dom';
 import './managerHome.css';
 import './inventory';
 import './employees';
-import './reports';
+import '../reports';
 import './login';
 
 

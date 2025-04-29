@@ -1,3 +1,4 @@
+// Shown when the user first opens the app
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import './login.css';
@@ -13,7 +14,7 @@ export default function Login({ onLogin }) {
     const handleSubmit = (e) => {
         e.preventDefault();
 
-        const users = JSON.parse(localStorage.getItem('users') || '{}');
+        const users = JSON.parse(localStorage.getItem('users') || '{}'); //send this to the backend when it's set up.
 
         if (isRegistering) {
             if (users[username]) {

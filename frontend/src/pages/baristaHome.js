@@ -1,0 +1,1 @@
+//Used to display the home page of the barista
