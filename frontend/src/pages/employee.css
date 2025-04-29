@@ -1,0 +1,22 @@
+/* Used to center */
+#header-container{
+    display: flex;
+}
+
+/* Used for the Manging Employees Title at the Top */
+#header {
+    margin-top: 4.5vh;
+    text-align: center;
+    align-items: center;
+    width: 100%;
+    font-size: 72rem;
+}
+
+/* Used to display the boxes in row form */
+#boxes-container {
+    display: grid;
+    gap: 20vh 20vw;
+    padding: 20vh 20vw;
+}
+
+

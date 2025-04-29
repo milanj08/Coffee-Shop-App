@@ -1,0 +1,9 @@
+.box {
+    width: 10vh;
+    margin: 10vh;
+    padding: 10vh;
+    border: 1vh solid #ccc;
+    border-radius: 12px;
+    text-align: center;
+    background-color: #766db1;
+}

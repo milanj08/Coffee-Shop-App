@@ -4,6 +4,8 @@ import baristaHome from './pages/baristaHome';
 import ManagerHome from './pages/managerHome';
 import Inventory from './pages/inventory';
 import Employees from './pages/employees';
+import EditEmployee from './pages/editemployees';
+import AddEmployees from './pages/addemployee';
 
 function App() {
   return (
@@ -19,6 +21,10 @@ function App() {
             <Route path = "/inventory" element = { <Inventory /> }/>
 
             <Route path = "/employees" element = { <Employees /> }/>
+
+            <Route path = "/editEmployee" element = { <EditEmployee /> }/>
+
+            <Route path = "/addEmployee" element = { <AddEmployees /> }/>
 
             {/* Redirect any unmatched routes to the login page */}
             <Route path = "*" element = { <Navigate to="/" /> }/>

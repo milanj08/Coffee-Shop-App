@@ -1,0 +1,14 @@
+/* Used for back button */
+#back {
+    background-color: #766db1;
+    width: 8vw;
+    height: 6vh;
+    font-size: 1rem;
+    margin-left: 5vh;
+    margin-top: 4vh;
+}
+
+/* Used for when hovering over back button */
+#back:hover {
+    background-color: #766db2;
+}
