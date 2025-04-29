@@ -1,0 +1,42 @@
+#logOutButton {
+    background-color: red;
+    width: 8vw;
+    height: 6vh;
+    font-size: 22px;
+    margin-left: 5vh;
+    margin-top: 4vh;
+}
+
+#logOutButton:hover {
+    background-color: darkred;
+}
+
+#mainTitle {
+    margin-top: 4.5vh;
+    margin-right: 20vh;
+    text-align: center;
+    width: 100%;
+    font-size: 72px;
+    font-weight: 800; 
+}
+
+.menuOptions{
+    margin: 0 2vh;
+    height: 30vh;
+    width: 30vh;
+    font-size: 30px;
+}
+
+.menuOptions:hover {
+    background-color: #5E5C8F;
+}
+
+.button-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 10vh;
+}
+
+.header-container {
+    display: flex;
+}

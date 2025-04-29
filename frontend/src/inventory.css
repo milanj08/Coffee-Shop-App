@@ -1,0 +1,136 @@
+body {
+    margin: 0;
+}
+
+#backButton {
+    width: 8vw;
+    height: 6vh;
+    font-size: 22px;
+    margin-left: 5vh;
+    margin-top: 4vh;
+}
+
+#mainTitle {
+    margin-top: 4.5vh;
+    margin-right: 20vh;
+    text-align: center;
+    width: 100%;
+    font-size: 72px;
+    font-weight: 800; 
+}
+
+/* Holds inventory and order summary */
+.content-container {
+    display: flex;
+    align-items: flex-start;
+    width: 100%;
+    height: 94vh;
+    box-sizing: border-box;
+}
+
+.inventory-container {
+    flex: 3;
+    background-color: #5f5f9f;
+    padding: 2vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 1vh;
+    height: 100%;
+}
+
+.inventory-label-container{
+    background-color: #a19ec7;
+    color: white;
+    font-weight: bold;
+    display: grid;
+    grid-template-columns: 10vw 15vw 15vw 10vw;
+    align-items: center;
+    padding: 10px;
+    border-radius: 5px;
+    margin-bottom: 5px;
+}
+
+.labels {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.inventory-row {
+    display: grid;
+    align-items: center;
+    background-color: #8676bb;
+    color: white;
+    grid-template-columns: 11vw 10vw 16vw 5vw 1.5vw 1.5vw 6vw 4vw;
+    gap: 2vw;
+    border-radius: 5px;
+}
+
+.itemContent {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+/* increment/decrement buttons */
+.itemButton {
+    background-color: #D9D9D9;
+    color: black;
+    width: 1.5vw;
+    margin-bottom: 2vh;
+    padding: 0.5vh;
+}
+
+.itemButton:hover {
+    background-color: #727272;
+}
+
+/* add quantity to order button */
+.addButton{
+    background-color: #4B4B4B;
+    width: 4vw;
+    margin-bottom: 2vh;
+    padding: 0.5vh;
+}
+
+.addButton:hover{
+    background-color: #2F2F2F;
+}
+
+/* Centers text in quantity field */
+.inventory-row input {
+    text-align: center;
+}
+
+/* Holds order summary */
+.order-container {
+    flex: 1;
+    background-color: #d3d3d3;
+    padding: 20px;
+    min-height: 200px;
+    color: black;
+    height: 100%;
+}
+
+.summaryLabels {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-weight: bold;
+}
+
+#orderButton {
+    background-color: #8676bb;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    font-weight: bold;
+    margin-right: 10px;
+    cursor: pointer;
+}
+
+#cancelButton {
+    background-color: #c0c0c0;
+    color: black;
+}

@@ -30,3 +30,18 @@ env/
 build/
 dist/
 *.egg-info/
+
+# Node (React)
+node_modules/
+build/
+dist/
+.env
+
+# Django static/media
+staticfiles/
+static/
+media/
+
+# OS
+.DS_Store
+Thumbs.db
