@@ -1,7 +1,9 @@
 from .models import Employee, Barista, Manager, InventoryManagement, Menu, Promotion, Sale, Accounting, Recipe
 from django.core.exceptions import ValidationError
+from django.core.exceptions import ObjectDoesNotExist
 
-def hire_barista(ssn, first_name, last_name, email, salary, day, start_time, end_time):
+# Functions to add entries to tables
+def add_barista(ssn, first_name, last_name, email, salary, day, start_time, end_time):
     try:
         emp = Employee(
             ssn=ssn,
@@ -27,7 +29,7 @@ def hire_barista(ssn, first_name, last_name, email, salary, day, start_time, end
         print(f"Validation failed: {e}")
         return None
 
-def hire_manager(ssn, first_name, last_name, email, salary, percentage):
+def add_manager(ssn, first_name, last_name, email, salary, percentage):
     try:
         emp = Employee(
             ssn=ssn,
@@ -153,3 +155,87 @@ def add_promotion(day, time, menu_name, promotion_price):
     except ValidationError as e:
         print(f"Validation failed: {e}")
     return None
+
+# Functions to delete entries from tables
+
+# Delete Menu Item
+def delete_menu_item(name):
+    try:
+        item = Menu.objects.get(name=name)
+        item.delete()
+        print(f"Deleted menu item: {name}")
+    except Menu.DoesNotExist:
+        print(f"Menu item '{name}' does not exist.")
+
+# Delete Barista by SSN
+def delete_barista(ssn):
+    try:
+        barista = Barista.objects.get(ssn__ssn=ssn)  # Link to Employee SSN
+        barista.delete()
+        Employee.objects.get(ssn=ssn).delete()  # Delete the Employee as well
+        print(f"Deleted barista with SSN {ssn}")
+    except ObjectDoesNotExist:
+        print(f"Barista with SSN {ssn} does not exist.")
+
+# Delete Manager by SSN
+def delete_manager(ssn):
+    try:
+        manager = Manager.objects.get(ssn__ssn=ssn)  # Link to Employee SSN
+        manager.delete()
+        Employee.objects.get(ssn=ssn).delete()  # Delete the Employee as well
+        print(f"Deleted manager with SSN {ssn}")
+    except ObjectDoesNotExist:
+        print(f"Manager with SSN {ssn} does not exist.")
+
+# Delete Employee by SSN
+def delete_employee(ssn):
+    try:
+        employee = Employee.objects.get(ssn=ssn)
+        employee.delete()
+        print(f"Deleted employee with SSN {ssn}")
+    except Employee.DoesNotExist:
+        print(f"Employee with SSN {ssn} does not exist.")
+
+# Delete Inventory Item by Name
+def delete_inventory_item(name):
+    try:
+        item = InventoryManagement.objects.get(name=name)
+        item.delete()
+        print(f"Deleted inventory item: {name}")
+    except InventoryManagement.DoesNotExist:
+        print(f"Inventory item '{name}' does not exist.")
+
+# Delete Promotion by Menu Item
+def delete_promotion(menu_name):
+    try:
+        promo = Promotion.objects.get(menu__name=menu_name)
+        promo.delete()
+        print(f"Deleted promotion for menu item: {menu_name}")
+    except Promotion.DoesNotExist:
+        print(f"Promotion for menu item '{menu_name}' does not exist.")
+
+# Delete Sale by Sale ID
+def delete_sale(sale_id):
+    try:
+        sale = Sale.objects.get(id=sale_id)
+        sale.delete()
+        print(f"Deleted sale with ID {sale_id}")
+    except Sale.DoesNotExist:
+        print(f"Sale with ID {sale_id} does not exist.")
+
+# Delete Accounting Entry by Day and Time
+def delete_account_entry(day, time):
+    try:
+        entry = Accounting.objects.get(day=day, time=time)
+        entry.delete()
+        print(f"Deleted accounting entry for {day} at {time}")
+    except Accounting.DoesNotExist:
+        print(f"No accounting entry found for {day} at {time}.")
+
+# Delete Recipe by Recipe Name
+def delete_recipe(recipe_name):
+    try:
+        Recipe.objects.filter(recipe_name__name=recipe_name).delete()
+        print(f"Deleted all recipe entries with name '{recipe_name}'")
+    except Exception as e:
+        print(f"Error deleting recipe: {e}")
