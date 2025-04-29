@@ -26,17 +26,8 @@ class Manager(models.Model):
 class InventoryManagement(models.Model):
     name = models.CharField(max_length=255, primary_key=True)
     unit = models.CharField(max_length=50)
-    ssn = models.ForeignKey(Manager, on_delete=models.CASCADE)
     quantity = models.PositiveIntegerField()
     price = models.DecimalField(max_digits=10, decimal_places=2)
-
-# --- Manages ---
-class Manages(models.Model):
-    ssn = models.ForeignKey(Manager, on_delete=models.CASCADE)
-    name = models.ForeignKey(InventoryManagement, on_delete=models.CASCADE)
-
-    class Meta:
-        unique_together = (('ssn', 'name'),)
 
 # --- Menu ---
 class Menu(models.Model):
