@@ -20,7 +20,7 @@ const BaristaHome = () => {
                 <h1 id = "mainTitle">Barista</h1>
             </div>
 
-            <div className="order-container">
+            <div className="orderContainer">
                 <div className="order-row">
                     <span id = "boxHeader">Order #</span>
                 </div>

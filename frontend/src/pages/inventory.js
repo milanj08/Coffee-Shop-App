@@ -138,7 +138,7 @@ const Inventory = () => {
 
 
                     { /* Holds summary labels */ }
-                    <div class="summaryLabels">
+                    <div class="summaryHeader">
                         <span class="summaryLabels">Item</span>
                         <span class="summaryLabels">Quantity</span>
                         <span class="summaryLabels">Cost</span>
@@ -146,7 +146,7 @@ const Inventory = () => {
                
                     { /* Map through each item to fill rows with items to be ordered */ }
                     {order.map((item, idx) => (
-                        <div key={idx} className="order-row">
+                        <div key={idx} className="summaryHeader">
                             <span>{item.name}</span>
                             <span>{item.quantity}</span>
                             <span>${(item.price * item.quantity).toFixed(2)}</span>
@@ -155,7 +155,7 @@ const Inventory = () => {
 
 
                     { /* straight line to split items and cost */ }
-                    <hr />
+                    <div style={{ height: '2px', backgroundColor: 'black', width: '100%', margin: '20px 0' }}></div>
                    
                     <div>Subtotal: ${subtotal.toFixed(2)}</div>
                     <div>Tax: ${tax.toFixed(2)}</div>
