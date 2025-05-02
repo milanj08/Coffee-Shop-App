@@ -1,6 +1,6 @@
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import Login from './pages/login'; 
-import baristaHome from './pages/baristaHome';
+import BaristaHome from './pages/baristaHome';
 import ManagerHome from './pages/managerHome';
 import Inventory from './pages/inventory';
 import Employees from './pages/employees';
@@ -14,7 +14,7 @@ function App() {
         <Routes>
             <Route exact path = "/" element = { <Login /> }/>
 
-            <Route path = "/baristaHome" element = { <baristaHome /> }/>
+            <Route path = "/baristaHome" element = { <BaristaHome /> }/>
 
             <Route path = "/managerHome" element = { <ManagerHome /> }/>
 

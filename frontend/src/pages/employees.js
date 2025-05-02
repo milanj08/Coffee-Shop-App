@@ -1,4 +1,4 @@
-import Box from '../components/box.js';
+import Box from '../components/Box.js';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import BackButton from '../components/backbutton.js';

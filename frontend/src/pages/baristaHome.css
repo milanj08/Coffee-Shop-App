@@ -1,0 +1,77 @@
+#logOutButton {
+    background-color: red;
+    width: 10vw;
+    height: 6vh;
+    font-size: 22px;
+    margin-left: 5vh;
+    margin-top: 4vh;
+}
+
+#logOutButton:hover {
+    background-color: darkred;
+}
+
+.order-container{
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    gap: 1vh;
+}
+
+.order-row{
+    display: flex;
+    justify-content: center;
+    background-color: #A79BD8;
+    width: 90vw;
+    height: 6vh;
+    padding-top: 2vh;
+}
+
+#boxHeader {
+    font-size: 28px;
+}
+
+#secondRow {
+    display: grid;
+    grid-template-columns: 45vw 45vw;
+    background-color: #B0A7D0;
+}
+
+#thirdRow {
+    display: grid;
+    grid-template-columns: 20vw 20vw 50vw;
+    background-color: #B0A7D0;
+}
+
+#bottomRow {
+    display: grid;
+    grid-template-columns: 30vw 60vw;
+    background-color: #B0A7D0;
+}
+
+
+.labels {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+
+.ordered-items-container {
+    justify-content: center;
+    width: 90vw;
+    height: 38vh;
+}
+
+.item{
+    display: grid;
+    grid-template-columns: 20vw 20vw 50vw;
+    background-color: white;
+    margin-bottom: 1vh;
+}
+
+#payButton {    
+    margin-top: 0vh;
+    width: 20vw;
+}
+

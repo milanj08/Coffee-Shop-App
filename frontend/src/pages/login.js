@@ -32,7 +32,12 @@ export default function Login({ onLogin }) {
             if (users[username] && users[username] === password) {
                 localStorage.setItem('currentUser', username);
                 onLogin?.(username); // optional callback
-                navigate('/managerHome');
+
+                if (username.includes("manager")){
+                    navigate('/managerHome');
+                }else if(username.includes("barista")){
+                    navigate('/baristaHome');
+                }
             } else {
                 setError('Invalid username or password');
             }
