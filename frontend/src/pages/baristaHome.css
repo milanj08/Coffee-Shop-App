@@ -70,8 +70,24 @@
     margin-bottom: 1vh;
 }
 
-#payButton {    
-    margin-top: 0vh;
-    width: 20vw;
+#payButton {
+    justify-content: center;
+    margin: 0;
+    width: 28vw;
+    height: 4.5vh;
+    margin-left: 1vw;
+}
+
+.orderButtons{
+    display: flex;
+    justify-content: 'center';
+    margin-top: '10px';
+
+}
+
+.paymentField{
+    justify-content: center;
+    margin-bottom: 1vh;
+    width: 58vw;
 }
 
