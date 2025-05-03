@@ -8,6 +8,7 @@ import Inventory from './pages/inventory';
 import Employees from './pages/employees';
 import EditEmployee from './pages/editemployees';
 import AddEmployees from './pages/addemployee';
+import AccountingReport from './pages/accountingreport';
 import { OrderProvider } from './OrderContext';
 
 function App() {
@@ -33,6 +34,8 @@ function App() {
               <Route path = "/editEmployee" element = { <EditEmployee /> }/>
 
               <Route path = "/addEmployee" element = { <AddEmployees /> }/>
+
+              <Route path = "/reports" element = { <AccountingReport/> }/>
 
               {/* Redirect any unmatched routes to the login page */}
               <Route path = "*" element = { <Navigate to="/" /> }/>

@@ -26,7 +26,6 @@ const ManagerHome = () => {
     const handleLogOut = () => {
         navigate("/login")
     };
-
     
     return (
         <div>

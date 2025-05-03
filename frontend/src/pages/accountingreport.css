@@ -1,0 +1,15 @@
+.accounting-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.accounting-table th, .accounting-table td {
+    border: 1px solid #ccc;
+    padding: 10px;
+    text-align: left;
+}
+
+.accounting-table th {
+    background-color: #f0f0f0;
+}
