@@ -71,7 +71,7 @@ const BaristaHome = () => {
             </div>
 
             { /* Holds labels, order field and payment row */ }
-            <div className="orderContainer">
+            <div className="body-container">
 
                 { /* Order number */ }
                 <div className="order-row">

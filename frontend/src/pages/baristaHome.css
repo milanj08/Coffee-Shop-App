@@ -11,7 +11,7 @@
     background-color: darkred;
 }
 
-.orderContainer{
+.body-container{
     display: flex;
     flex-direction: column;
     justify-content: center;

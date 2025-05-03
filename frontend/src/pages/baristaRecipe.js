@@ -31,7 +31,7 @@ const BaristaRecipe = () => {
             </div>
 
             { /* Holds order number, labels and steps */ }
-            <div className="orderContainer">
+            <div className="recipe-container">
                 { /* Order # */ }
                 <div className="order-row">
                     <span id = "boxHeader">Order {String(orderNumber).padStart(2, '0')}</span>
