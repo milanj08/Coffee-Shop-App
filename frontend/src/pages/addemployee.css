@@ -1,15 +1,11 @@
-.form-container {
-    display: flex;
-    flex-direction: column;
+#form-group {
     align-items: center;
-    max-width: 500px;
-    margin: 2rem auto;
-    padding: 2rem;
-}
-
-.form-group {
     width: 100%;
     margin-bottom: 1rem;
+}
+
+#edit-empoloyee-container {
+    align-items: center;
 }
 
 .form-group label {

@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import BackButton from '../components/backbutton'
+import './editemployees.css'
 
 export default function EditEmployee() {
     const [salary, setSalary] = useState('')
@@ -41,28 +42,25 @@ export default function EditEmployee() {
 
     return (
         <>
-            <div className="edit-employee-container">
-                <div className="header-container">
-                    <BackButton endpoint="employees" />
-                    <h1 className="header">Edit Employee</h1>
-                </div>
-
-                <div className="form-group">
-                    <label htmlFor="salary">Salary:</label>
-                    <input
-                        type="number"
-                        id="salary"
-                        value={salary}
-                        onChange={handleSalaryChange}
-                        onKeyDown={handleKeyDown}
-                        placeholder="Enter new salary"
-                    />
-                </div>
-
-                <button onClick={handleDelete} className="delete-button">
-                    Delete Employee
-                </button>
+            <div className="header-container">
+                <BackButton endpoint="employees" />
             </div>
+            <h1 className="header">Edit Employee</h1>
+            <div className="edit-employee-form-group">
+                <label htmlFor="salary">Salary:</label>
+                <input
+                    type="number"
+                    id="salary"
+                    value={salary}
+                    onChange={handleSalaryChange}
+                    onKeyDown={handleKeyDown}
+                    placeholder="Enter new salary"
+                />
+            </div>
+
+            <button onClick={handleDelete} className="delete-button">
+                Delete Employee
+            </button>
         </>
     )
 }
