@@ -2,31 +2,34 @@ import Box from '../components/Box.js';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 import BackButton from '../components/backbutton.js';
+import './employee.css';
 
 export default function Employees() {
     const navigate = useNavigate();
 
-    //dummy data for baristas
     const employees = [
         { name: 'Alice' },
         { name: 'Bob' },
         { name: 'Charlie' }
     ];
 
-    //navigates to add employee page
     const handleAdd = () => {
         navigate("/addEmployee");
     };
 
     return (
         <>
-            <div classname = "managingemployees">
-                <div className="header-container">
-                    <BackButton endpoint = "managerHome" />
-                    <h1 className='header'>Employee Management</h1>
+            <div className="employees-page">
+                <div className="back-button-container">
+                    <BackButton endpoint="managerHome" />
                 </div>
-                <button id="addEmployee" onClick={handleAdd}>Add Employee</button>
-                <div classname = "boxes-container">
+
+                <div className="employees-header">
+                    <h1>Employee Management</h1>
+                    <button id="addEmployee" onClick={handleAdd}>Add Employee</button>
+                </div>
+
+                <div className="boxes-grid">
                     {employees.map((employee, index) => (
                         <Box key={index} name={employee.name} />
                     ))}

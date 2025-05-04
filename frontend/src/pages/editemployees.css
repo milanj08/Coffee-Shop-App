@@ -1,0 +1,23 @@
+#header-container {
+    margin-bottom: 20px;
+}
+
+#form-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.edit-employee-form-group {
+    position: absolute;
+    top: 50%;
+    left: 55%;
+    margin-bottom: 20px;
+}
+
+.delete-button {
+    position: absolute;
+    top: 47.5%;
+    left: 35%;
+    margin-bottom: 20px;
+}
