@@ -3,7 +3,6 @@ import BackButton from '../components/backbutton';
 import './accountingreport.css';
 
 export default function AccountingReport() {
-    //change to the actual API call to get the data
     const dummyData = [
         { timestamp: '2025-05-01 10:00:00', balance: '$5,000.00' },
         { timestamp: '2025-05-02 14:30:00', balance: '$5,500.00' },
@@ -12,28 +11,31 @@ export default function AccountingReport() {
 
     return (
         <>
-            <div className="edit-employee-container">
-                <div className="header-container">
-                    <BackButton endpoint="employees" />
-                    <h1 className="header">Accounting Report</h1>
+            <div className="report-page-container">
+                <div className="back-button-container">
+                    <BackButton endpoint="managerHome" />
                 </div>
 
-                <table className="accounting-table">
-                    <thead>
-                        <tr>
-                            <th>Timestamp</th>
-                            <th>Balance</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {dummyData.map((entry, index) => (
-                            <tr key={index}>
-                                <td>{entry.timestamp}</td>
-                                <td>{entry.balance}</td>
+                <div className="report-content">
+                    <h1 className="header">Accounting Report</h1>
+
+                    <table className="accounting-table">
+                        <thead>
+                            <tr>
+                                <th>Timestamp</th>
+                                <th>Balance</th>
                             </tr>
-                        ))}
-                    </tbody>
-                </table>
+                        </thead>
+                        <tbody>
+                            {dummyData.map((entry, index) => (
+                                <tr key={index}>
+                                    <td>{entry.timestamp}</td>
+                                    <td>{entry.balance}</td>
+                                </tr>
+                            ))}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </>
     );

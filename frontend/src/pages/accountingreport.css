@@ -1,10 +1,35 @@
-.accounting-table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
+.report-page-container {
+    position: relative;
+    min-height: 100vh;
+    padding: 20px;
 }
 
-.accounting-table th, .accounting-table td {
+.back-button-container {
+    position: absolute;
+    top: 20px;
+    left: 20px;
+}
+
+.report-content {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    margin-top: 60px;
+}
+
+.header {
+    margin-bottom: 20px;
+    text-align: center;
+}
+
+.accounting-table {
+    border-collapse: collapse;
+    width: 100%;
+    max-width: 600px;
+}
+
+.accounting-table th,
+.accounting-table td {
     border: 1px solid #ccc;
     padding: 10px;
     text-align: left;

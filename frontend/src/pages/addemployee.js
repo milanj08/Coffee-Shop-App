@@ -37,9 +37,8 @@ export default function AddEmployee() {
             <div className="edit-employee-container">
                 <div className="header-container">
                     <BackButton endpoint="employees" />
-                    <h1 className="header">Add Employee</h1>
                 </div>
-
+                <h1 className="header">Add Employee</h1>
                 <div className="form-group">
                     <label>Name:</label>
                     <input
