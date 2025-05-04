@@ -2,23 +2,30 @@ import React, { useState } from 'react'
 import BackButton from '../components/backbutton'
 
 export default function AddEmployee() {
-    const [name, setName] = useState('')
+    const [first_name, setFirstName] = useState('')
+    const [last_name, setLastName] = useState('')
     const [ssn, setSSN] = useState('')
     const [email, setEmail] = useState('')
     const [salary, setSalary] = useState('')
-    //api to send to backend to add employee
+
     const handleSubmit = async () => {
         try {
-            const response = await fetch('/api/employees', {
+            const response = await fetch('http://localhost:8000/api/baristas/', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    name,
-                    ssn,
-                    email,
-                    salary: parseFloat(salary),
+                    ssn: {
+                        ssn: parseInt(ssn),
+                        first_name,
+                        last_name,
+                        email,
+                        salary: parseFloat(salary),
+                    },
+                    day: '2025-05-01', 
+                    start_time: '08:00:00', 
+                    end_time: '16:00:00', 
                 }),
             })
 
@@ -40,12 +47,20 @@ export default function AddEmployee() {
                 </div>
                 <h1 className="header">Add Employee</h1>
                 <div className="form-group">
-                    <label>Name:</label>
+                    <label>First Name:</label>
                     <input
                         type="text"
-                        value={name}
-                        onChange={(e) => setName(e.target.value)}
-                        placeholder="Enter name"
+                        value={first_name}
+                        onChange={(e) => setFirstName(e.target.value)}
+                        placeholder="Enter first name"
+                    />
+
+                    <label>Last Name:</label>
+                    <input
+                        type="text"
+                        value={last_name}
+                        onChange={(e) => setLastName(e.target.value)}
+                        placeholder="Enter last name"
                     />
 
                     <label>SSN:</label>
