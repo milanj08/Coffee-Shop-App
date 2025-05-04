@@ -90,6 +90,7 @@ const BaristaHome = () => {
             return;
         }
     
+        console.log("All Recipes:", allRecipes);
         setRecipes(allRecipes);
         navigate('/baristaRecipe');
     };

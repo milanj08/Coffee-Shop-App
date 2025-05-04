@@ -1,5 +1,6 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import './managerHome';
 import './inventory.css';
 
@@ -7,21 +8,13 @@ import './inventory.css';
 // 10% tax rate
 const taxRate = 0.10;
 
-
-// Just for designing until real data comes in
-const tempInventory = [
-    { unit: "001", name: "Milk", quantity: "57(oz)", price: 2.99},
-    { unit: "002", name: "Sugar", quantity: "33(lbs)", price: 2.00}
-];
-
-
 const Inventory = () => {
     const navigate = useNavigate();
-
-
-    // Fills an array with zeros based on the amount of items found in tempInventory
-    const [quantities, setQuantities] = useState(Array(tempInventory.length).fill(0));
    
+    const [inventoryItems, setInventoryItems] = useState([]);
+
+    const [quantities, setQuantities] = useState([]);
+
     // Sets inital quantities to zero
     const [order, setOrder] = useState([]);
 
@@ -56,7 +49,6 @@ const Inventory = () => {
             // Check if an item already items
             const existing = prev.find(entry => entry.name === item.name);
 
-
             // If it exists, update its quantity if needed otherwise keep it the same
             if (existing) {
                 return prev.map(entry =>
@@ -69,8 +61,20 @@ const Inventory = () => {
         });
     };
 
-
-
+    // Receive all inventory found in database on page load
+    useEffect(() => {
+        const fetchInventory = async () => {
+            try {
+                const response = await axios.get('http://localhost:8000/api/inventory/');
+                setInventoryItems(response.data);
+                setQuantities(Array(response.data.length).fill(0));
+            } catch (error) {
+                console.error("Failed to fetch inventory data:", error);
+            }
+        };
+    
+        fetchInventory();
+    }, []);
 
     let subtotal = 0;
     for (let i = 0; i < order.length; i++){
@@ -106,12 +110,12 @@ const Inventory = () => {
 
                     { /* Iventory Items */ }
                     { /* Map through each item to fill rows with item data */ }
-                    {tempInventory.map((item, index) => (
+                    {inventoryItems.map((item, index) => (
                             <div key={index} className="inventory-row">
                                 <span className="itemContent">{item.unit}</span>
                                 <span className="itemContent">{item.name}</span>
                                 <span className="itemContent">{item.quantity}</span>
-                                <span className="itemContent">${item.price.toFixed(2)}</span>
+                                <span className="itemContent">${item.price}</span>
                                
                                 { /* Increment and decrement buttons */ }
                                 <button className="itemButton" onClick={() => updateQuantity(index, 1)}>+</button>
