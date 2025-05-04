@@ -97,10 +97,10 @@ const Inventory = () => {
                 <div className="inventory-container">
                     { /* Iventory labels */ }
                     <div className="inventory-label-container">
-                        <span class="labels">Unit</span>
-                        <span class="labels">Item Name</span>
-                        <span class="labels">Quantity</span>
-                        <span class="labels">Price</span>
+                        <span className="labels">Unit</span>
+                        <span className="labels">Item Name</span>
+                        <span className="labels">Quantity</span>
+                        <span className="labels">Price</span>
                     </div>
 
 
@@ -108,14 +108,14 @@ const Inventory = () => {
                     { /* Map through each item to fill rows with item data */ }
                     {tempInventory.map((item, index) => (
                             <div key={index} className="inventory-row">
-                                <span class="itemContent">{item.unit}</span>
-                                <span class="itemContent">{item.name}</span>
-                                <span class="itemContent">{item.quantity}</span>
-                                <span class="itemContent">${item.price.toFixed(2)}</span>
+                                <span className="itemContent">{item.unit}</span>
+                                <span className="itemContent">{item.name}</span>
+                                <span className="itemContent">{item.quantity}</span>
+                                <span className="itemContent">${item.price.toFixed(2)}</span>
                                
                                 { /* Increment and decrement buttons */ }
-                                <button class="itemButton" onClick={() => updateQuantity(index, 1)}>+</button>
-                                <button class="itemButton" onClick={() => updateQuantity(index, -1)}>-</button>
+                                <button className="itemButton" onClick={() => updateQuantity(index, 1)}>+</button>
+                                <button className="itemButton" onClick={() => updateQuantity(index, -1)}>-</button>
                                
                                 { /* Text box for updating quantity manually */ }
                                 <input
@@ -126,7 +126,7 @@ const Inventory = () => {
                                 />
 
 
-                                <button class="addButton" onClick={() => handleAddToOrder(item, quantities[index])}>Add</button>
+                                <button className="addButton" onClick={() => handleAddToOrder(item, quantities[index])}>Add</button>
                             </div>
                     ))}
                 </div>
@@ -138,10 +138,10 @@ const Inventory = () => {
 
 
                     { /* Holds summary labels */ }
-                    <div class="summaryHeader">
-                        <span class="summaryLabels">Item</span>
-                        <span class="summaryLabels">Quantity</span>
-                        <span class="summaryLabels">Cost</span>
+                    <div className="summaryHeader">
+                        <span className="summaryLabels">Item</span>
+                        <span className="summaryLabels">Quantity</span>
+                        <span className="summaryLabels">Cost</span>
                     </div>
                
                     { /* Map through each item to fill rows with items to be ordered */ }

@@ -10,13 +10,15 @@ const BaristaRecipe = () => {
     const navigate = useNavigate();
 
     // Gets order details from OrderContext
-    const { orders, setOrders, setOrderNumber, orderNumber } = useContext(OrderContext);
+    const { recipes, orderNumber } = useContext(OrderContext);
     const [currentIndex, setCurrentIndex] = useState(0);
-    const currentDrink = orders[currentIndex];
 
+    // Get the current recipe based on currentIndex
+    const currentRecipe = recipes[currentIndex];
+    
     // Checks if we have additional recipes to make, otherwise go to the next page
     const handleNext = () => {
-        if (currentIndex < orders.length - 1) {
+        if (currentIndex < recipes.length - 1) {
             setCurrentIndex(currentIndex + 1);
         } else {
             navigate('/baristaCompleted');
@@ -27,43 +29,40 @@ const BaristaRecipe = () => {
         <div>
             { /* RECIPE FOR: recipe name */ }
             <div>
-                <h1 id = "mainTitle">RECIPE FOR: {currentDrink?.name}</h1>
+                <h1 id="mainTitle">RECIPE FOR: {currentRecipe.recipe_name}</h1>
             </div>
 
             { /* Holds order number, labels and steps */ }
             <div className="recipe-container">
                 { /* Order # */ }
                 <div className="order-row">
-                    <span id = "boxHeader">Order {String(orderNumber).padStart(2, '0')}</span>
+                    <span id = "boxHeader">Order {orderNumber} : Drink #{currentRecipe.index}</span>
                 </div>
 
                 { /* Recipe labels */ }
                 <div className="order-row" id = "second-row">
-                    <span class="labels">POS NO.</span>
-                    <span class="labels">IN. QUANTITY</span>
-                    <span class="labels">IN. UNIT</span>
-                    <span class="labels">INGREDIENT NAME</span>
-                    <span class="labels">DESCRIPTION</span>
+                    <span className="labels">POS NO.</span>
+                    <span className="labels">IN. QUANTITY</span>
+                    <span className="labels">IN. UNIT</span>
+                    <span className="labels">INGREDIENT NAME</span>
+                    <span className="labels">DESCRIPTION</span>
                 </div>
 
                 { /* Recipe steps */ }
                 <div className="recipe-steps">
-                    { /* Creates 3 recipe rows for styling */ }
-                    {[...Array(3)].map((_, index) => (
-                        <div className="recipe-row" key={index}>
-                            <div className="recipe-cell">01</div>
-                            <div className="recipe-cell"></div>
-                            <div className="recipe-cell"></div>
-                            <div className="recipe-cell"></div>
-                            <div className="recipe-cell"></div>
-                        </div>
-                    ))}
+                    <div className="recipe-row">
+                        <div className="recipe-cell">{currentRecipe.position_number}</div>
+                        <div className="recipe-cell">{currentRecipe.ingredient_quantity}</div>
+                        <div className="recipe-cell">{currentRecipe.ingredient_unit}</div>
+                        <div className="recipe-cell">{currentRecipe.ingredient_name}</div>
+                        <div className="recipe-cell">{currentRecipe.execution_description}</div>
+                    </div>
                 </div>
             </div>
 
             { /* Either go to the next recipe or complete order page */ }
             <div className ="nextStepButton">
-                    <button onClick={handleNext}>Next Recipe / Finish Order</button>
+                    <button onClick={handleNext}>{currentIndex < recipes.length - 1 ? 'Next Recipe' : 'Finish Order'}</button>
             </div>
         </div>
     );

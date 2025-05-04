@@ -2,6 +2,7 @@
 import React, { useContext, useState } from "react";
 import { OrderContext } from '../OrderContext';
 import { useNavigate } from 'react-router-dom';
+import axios from 'axios';
 import './baristaHome.css';
 import './login';
 import './baristaRecipe';
@@ -9,7 +10,7 @@ import './baristaRecipe';
 const BaristaHome = () => {
 
     // Used to keep track of orders and order number
-    const { setOrders, orderNumber } = useContext(OrderContext);
+    const { setRecipes, orderNumber } = useContext(OrderContext);
 
     const navigate = useNavigate();
 
@@ -43,16 +44,55 @@ const BaristaHome = () => {
     };
 
     // Check if the user has a payment method selected before proceeding
-    const handlePay = () => {
+    const handlePay = async () => {
         if (paymentMethod.trim() === '') {
-          alert('Please enter a payment method before proceeding.');
-          return; // do not proceed
+            // do not proceed if no payment method entered
+            alert('Please enter a payment method before proceeding.');
+            return;
         }
-        // Saves current order
-        setOrders(orderItems);
-        // Proceed to the recipe page
+      
+        // Used to store all recipes and their steps
+        const allRecipes = [];
+      
+        
+        for (const item of orderItems) {
+            const name = item.name;
+            const quantity = item.quantity;
+    
+            try {
+                const response = await axios.get(`http://localhost:8000/api/recipes/?recipe_name=${encodeURIComponent(name)}`);
+                const recipeData = response.data;
+    
+                if (recipeData.length === 0) {
+                    // do not proceed if recipe cant be found in DB
+                    alert(`No recipe found for ${name}`);
+                    return;
+                }
+    
+                // Add the recipe data to 'allRecipes' and tag it with an index
+                for (let i = 0; i < quantity; i++) {
+                    const indexedRecipeData = recipeData.map(recipe => ({
+                        ...recipe,
+                        // Add index to account for multiple orders of the same item
+                        index: i + 1 
+                    }));
+                    allRecipes.push(...indexedRecipeData);
+                }
+            } catch (error) {
+                console.error(`Error fetching recipe for ${name}:`, error);
+                alert(`Failed to fetch recipe for ${name}`);
+                return;
+            }
+        }
+    
+        if (allRecipes.length === 0) {
+            alert("No valid recipes found.");
+            return;
+        }
+    
+        setRecipes(allRecipes);
         navigate('/baristaRecipe');
-      };
+    };
 
     const [paymentMethod, setPaymentMethod] = useState('');
 
@@ -80,15 +120,15 @@ const BaristaHome = () => {
 
                 { /* Day and Time */ }
                 <div className="order-row" id = "secondRow">
-                    <span class="labels">{day}</span>
-                    <span class="labels">{time}</span>
+                    <span className="labels">{day}</span>
+                    <span className="labels">{time}</span>
                 </div>
 
                 { /* Order labels */ }
                 <div className="order-row" id = "thirdRow">
-                    <span class="labels">ITEM NO.</span>
-                    <span class="labels">QUANTITY</span>
-                    <span class="labels">ITEM NAME</span>
+                    <span className="labels">ITEM NO.</span>
+                    <span className="labels">QUANTITY</span>
+                    <span className="labels">ITEM NAME</span>
                 </div>
 
                 { /* Order field */ }
