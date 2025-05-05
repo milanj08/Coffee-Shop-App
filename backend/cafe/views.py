@@ -7,12 +7,12 @@ from datetime import date, datetime
 from decimal import Decimal
 from .models import (
     Barista, Manager, InventoryManagement, Menu,
-    Promotion, Sale, Accounting, Recipe
+    Promotion, Sale, Accounting, Recipe, Employee
 )
 from .serializers import (
     BaristaSerializer, ManagerSerializer, InventoryManagementSerializer,
     MenuSerializer, PromotionSerializer, SaleSerializer,
-    AccountingSerializer, RecipeSerializer
+    AccountingSerializer, RecipeSerializer, EmployeeSerializer
 )
 
 
@@ -178,32 +178,33 @@ class EmployeeDeleteAPIView(APIView):
         
 class UpdateSalaryAPIView(APIView):
     """
-    Update the salary of an employee using their SSN via query param.
+    Update the salary of an Employee (Barista or Manager) using their SSN via query param.
     Example: PUT /api/employees/update-salary/?ssn=123-45-6789
     """
-    
+
     def put(self, request):
-        ssn = request.query_params.get('ssn', None)
-        salary = request.data.get('salary', None)
-        
-        if not ssn or not salary:
-            return Response({'error': 'SSN and salary are required'})
+        ssn = request.query_params.get('ssn')
+        new_salary = request.data.get('salary')
+
+        if not ssn or new_salary is None:
+            return Response({'error': 'SSN and salary are required'}, status=400)
 
         try:
-            # Try to find Barista
-            employee = Barista.objects.filter(ssn=ssn).first()
-            if not employee:
-                # If no Barista, try finding Manager
-                employee = Manager.objects.filter(ssn=ssn).first()
-            
-            if not employee:
-                return Response({'error': 'Employee not found'})
-            
-            # Update salary
-            employee.salary = salary
-            employee.save()
-            
-            return Response({'message': 'Salary updated successfully'})
-        
-        except Exception as e:
-            return Response({'error': str(e)})
+            new_salary = Decimal(new_salary)
+        except (ValueError, TypeError):
+            return Response({'error': 'Invalid salary value'}, status=400)
+
+        # Find the employee by SSN
+        employee = Employee.objects.filter(ssn=ssn).first()
+        if not employee:
+            return Response({'error': 'Employee not found'}, status=404)
+
+        # Use the serializer to validate and save the updated salary
+        employee.salary = new_salary
+        serializer = EmployeeSerializer(employee, data=request.data, partial=True)  # `partial=True` allows updating only certain fields
+
+        if serializer.is_valid():
+            serializer.save()  # Save the employee with the updated salary
+            return Response({'message': 'Employee salary updated successfully'}, status=200)
+
+        return Response(serializer.errors, status=400)

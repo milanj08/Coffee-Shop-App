@@ -28,13 +28,18 @@ export default function EditEmployee() {
     const handleSalaryChange = (e) => setSalary(e.target.value);
 
     const handleSalarySubmit = async () => {
+        if (!salary || isNaN(salary) || Number(salary) <= 0) {
+            alert('Please enter a valid salary');
+            return;
+        }
+
         try {
-            const response = await fetch('/api/employees/update-salary', {
-                method: 'POST',
+            const response = await fetch(`http://localhost:8000/api/employees/update-salary/?ssn=${encodeURIComponent(ssn)}`, {
+                method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                body: JSON.stringify({ ssn, salary }),
+                body: JSON.stringify({ salary }),
             });
 
             if (!response.ok) {
@@ -48,7 +53,9 @@ export default function EditEmployee() {
     };
 
     const handleKeyDown = (e) => {
-        if (e.key === 'Enter') handleSalarySubmit();
+        if (e.key === 'Enter') {
+            handleSalarySubmit();  // Trigger salary update on Enter key press
+        }
     };
 
     return (
@@ -64,7 +71,7 @@ export default function EditEmployee() {
                     id="salary"
                     value={salary}
                     onChange={handleSalaryChange}
-                    onKeyDown={handleKeyDown}
+                    onKeyDown={handleKeyDown} 
                     placeholder="Enter new salary"
                 />
             </div>

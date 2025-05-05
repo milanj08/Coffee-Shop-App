@@ -6,7 +6,13 @@ from .models import (Employee, Barista, Manager, InventoryManagement, Menu,
 class EmployeeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Employee
-        fields = '__all__'
+        fields = ['ssn', 'first_name', 'last_name', 'email', 'salary']
+    
+    # Custom validation for salary field
+    def validate_salary(self, value):
+        if value <= 0:
+            raise serializers.ValidationError("Salary must be greater than 0.")
+        return value
 
 
 class BaristaSerializer(serializers.ModelSerializer):

@@ -27,7 +27,7 @@ urlpatterns = [
     path('accounting/check/', CurrentBankAmountAPIView.as_view(), name='check-accounting'),
     path('accounting/purchase/', CurrentBankAmountAPIView.as_view(), name='check-accounting'),
     path('employees/delete/', EmployeeDeleteAPIView.as_view(), name='employee-delete'),
-    path('api/employees/update-salary/', UpdateSalaryAPIView.as_view(), name='update-salary'),
+    path('employees/update-salary/', UpdateSalaryAPIView.as_view(), name='update-salary'),
 
 ]
 
