@@ -18,6 +18,8 @@ const Inventory = () => {
     // Sets inital quantities to zero
     const [order, setOrder] = useState([]);
 
+    const [accountBalance, setAccountBalance] = useState("0.00");
+
 
     // After pressing the back button sends you to the manager home page
     const handleBackClick = () => {
@@ -75,8 +77,13 @@ const Inventory = () => {
             const response = await axios.patch('http://localhost:8000/api/inventory/update/', { order: orderItems }, {headers: {'Content-Type': 'application/json'}});
             console.log(response.data);
 
-            // Refresh our inventory to reflect our purchase
-            await fetchInventory();  
+            // Used to update our accounting balance based on how much we purchased
+            const accountBalanceResponse = await axios.post('http://localhost:8000/api/accounting/purchase/', { total_purchase: total }, {headers: {'Content-Type': 'application/json'}});
+            console.log(accountBalanceResponse.data);
+
+            // Refresh our inventory and balance to reflect our purchase
+            await fetchInventory(); 
+            await fetchAccountBalance();
 
             // Clears current order
             setOrder([]);            
@@ -97,9 +104,19 @@ const Inventory = () => {
         }
     };
 
+    const fetchAccountBalance = async () => {
+        try {
+            const response = await axios.get('http://localhost:8000/api/accounting/check/');
+            setAccountBalance(response.data.account_balance);
+        } catch (error) {
+            console.error("Failed to fetch account balance:", error);
+        }
+    };
+
     // On page load: fetch current inventory
     useEffect(() => {
         fetchInventory();
+        fetchAccountBalance();
     }, []);
 
     let subtotal = 0;
@@ -164,6 +181,7 @@ const Inventory = () => {
 
                 { /* Order Summary */ }
                 <div className="order-container">
+                    <h3>Current Balance: ${accountBalance}</h3>
                     <h3>Order Summary</h3>
 
 

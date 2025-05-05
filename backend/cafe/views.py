@@ -3,6 +3,8 @@ from rest_framework import serializers
 from rest_framework.views import APIView
 from rest_framework.response import Response
 from rest_framework import generics
+from datetime import date, datetime
+from decimal import Decimal
 from .models import (
     Barista, Manager, InventoryManagement, Menu,
     Promotion, Sale, Accounting, Recipe
@@ -85,6 +87,52 @@ class SaleListCreateAPIView(generics.ListCreateAPIView):
 class AccountingListCreateAPIView(generics.ListCreateAPIView):
     queryset = Accounting.objects.all()
     serializer_class = AccountingSerializer
+
+class CurrentBankAmountAPIView(APIView):
+    # Used when a purchase is made in inventory management
+    def post(self, request):
+        # Gets how much our total purchase came out to
+        total_purchase = request.data.get('total_purchase')
+
+        if total_purchase is None:
+             return Response({'error': 'Missing total_cost'})
+
+        # Turns it into a decimal before subtracting
+        total_purchase = Decimal(total_purchase)
+
+        # Gets our most recent accounting form based on the most recent day and time
+        latest_entry = Accounting.objects.all().order_by('-day', '-time').first()
+
+        # If we find an entry, subtract our total purchase from it
+        # If we cant find one or it becomes a negative value, set it to 0.00
+        if latest_entry:
+            new_balance = latest_entry.account_balance - total_purchase
+            if new_balance < 0:
+                new_balance = Decimal("0.00")
+        else:
+            new_balance = Decimal("0.00")
+
+        # Save a new accounting entry
+        new_entry = Accounting.objects.create(
+            account_balance=new_balance,
+            day=date.today(),
+            time=datetime.now().time()
+        )
+
+        return Response({'message': 'Account updated', 'new_balance': str(new_entry.account_balance)})
+   
+    # Used to check the balance in our account
+    def get(self, request):
+        
+         # Gets our most recent accounting form based on the most recent day and time
+        latest_entry = Accounting.objects.all().order_by('-day', '-time').first()
+        if latest_entry:
+            print("Current balance:", latest_entry.account_balance)
+            return Response({
+                'account_balance': latest_entry.account_balance
+            })
+        print("No accounting entries found. Returning 0.00")
+        return Response({'account_balance': "0.00"})
 
 
 class RecipeListCreateAPIView(generics.ListCreateAPIView):
