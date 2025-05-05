@@ -23,7 +23,8 @@ export default function Employees() {
                 }
                 const data = await response.json();
                 const parsedEmployees = data.map(barista => ({
-                    name: `${barista.ssn.first_name} ${barista.ssn.last_name}`
+                    name: `${barista.ssn.first_name} ${barista.ssn.last_name}`,
+                    ssn: barista.ssn.ssn
                 }));
                 setEmployees(parsedEmployees);
             } catch (err) {
@@ -52,7 +53,7 @@ export default function Employees() {
                 {loading && <p>Loading employees...</p>}
                 {error && <p>{error}</p>}
                 {!loading && !error && employees.map((employee, index) => (
-                    <Box key={index} name={employee.name} />
+                    <Box key={index} name={employee.name} ssn={employee.ssn} />
                 ))}
             </div>
         </div>
