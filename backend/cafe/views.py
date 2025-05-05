@@ -46,6 +46,26 @@ class InventoryListCreateAPIView(generics.ListCreateAPIView):
     queryset = InventoryManagement.objects.all()
     serializer_class = InventoryManagementSerializer
 
+# Handles updating quantity of an item in our inventory
+class UpdateInventoryAPIView(APIView):
+    def patch(self, request):
+        # Checking if our data was sent properly
+        print("Received data:", request.data)
+
+        try:
+            # Get list of items from request
+            order_items = request.data.get("order", [])
+
+            # For each item in orders, add how much product we ordered to our exisitng quantity
+            for item in order_items:
+                inventory_item = InventoryManagement.objects.get(name=item['name'])
+                inventory_item.quantity += item['quantity']
+                inventory_item.save()
+
+            return Response({"message": "Inventory updated successfully"})
+        except Exception as e:
+            return Response({"error": str(e)})
+
 
 class MenuListCreateAPIView(generics.ListCreateAPIView):
     queryset = Menu.objects.all()

@@ -61,18 +61,44 @@ const Inventory = () => {
         });
     };
 
-    // Receive all inventory found in database on page load
-    useEffect(() => {
-        const fetchInventory = async () => {
-            try {
-                const response = await axios.get('http://localhost:8000/api/inventory/');
-                setInventoryItems(response.data);
-                setQuantities(Array(response.data.length).fill(0));
-            } catch (error) {
-                console.error("Failed to fetch inventory data:", error);
-            }
-        };
+    const handleOrder = async () => {
+        // Saving the items we want to order and how many into orderItems
+        const orderItems = order.map(item => ({
+            name: item.name,
+            quantity: item.quantity
+        }));
     
+        console.log("Sending order:", orderItems);
+    
+        try {
+            // Sends a message to the backend and prints the reponse to console
+            const response = await axios.patch('http://localhost:8000/api/inventory/update/', { order: orderItems }, {headers: {'Content-Type': 'application/json'}});
+            console.log(response.data);
+
+            // Refresh our inventory to reflect our purchase
+            await fetchInventory();  
+
+            // Clears current order
+            setOrder([]);            
+        } catch (error) {
+            console.error("Error updating inventory:", error);
+        }
+    };
+    
+
+    // Receive all inventory found in database
+    const fetchInventory = async () => {
+        try {
+            const response = await axios.get('http://localhost:8000/api/inventory/');
+            setInventoryItems(response.data);
+            setQuantities(Array(response.data.length).fill(0));
+        } catch (error) {
+            console.error("Failed to fetch inventory data:", error);
+        }
+    };
+
+    // On page load: fetch current inventory
+    useEffect(() => {
         fetchInventory();
     }, []);
 
@@ -165,7 +191,7 @@ const Inventory = () => {
                     <div>Tax: ${tax.toFixed(2)}</div>
                     <div>Total: ${total.toFixed(2)}</div>
                     <div className="order-buttons">
-                        <button id="orderButton">ORDER</button>
+                        <button id="orderButton" onClick={handleOrder}>ORDER</button>
                         <button id="cancelButton" onClick={() => setOrder([])}>CANCEL</button>
                     </div>
                 </div>

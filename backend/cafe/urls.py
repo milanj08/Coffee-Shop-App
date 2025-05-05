@@ -7,7 +7,8 @@ from .views import (
     PromotionListCreateAPIView,
     SaleListCreateAPIView,
     AccountingListCreateAPIView,
-    RecipeListCreateAPIView
+    RecipeListCreateAPIView,
+    UpdateInventoryAPIView
 )
 
 urlpatterns = [
@@ -19,6 +20,7 @@ urlpatterns = [
     path('sales/', SaleListCreateAPIView.as_view(), name='sales'),
     path('accounting/', AccountingListCreateAPIView.as_view(), name='accounting'),
     path('recipes/', RecipeListCreateAPIView.as_view(), name='recipes'),
+    path('inventory/update/', UpdateInventoryAPIView.as_view(), name='update-inventory'),
 ]
 
 # Example of a POST request to add a manager
