@@ -3,20 +3,17 @@ import './box.css';
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
 
-export default function Box({name}) {
+export default function Box({ name, ssn }) {
     const navigate = useNavigate();
 
-    //navigates to edit employee page
     const handleEdit = () => {
-        navigate("/editEmployee");
+        navigate("/editEmployee", { state: { ssn } });
     };
 
-    return(
-        <>
-        <div className = "box">
+    return (
+        <div className="box">
             <h2>{name}</h2>
             <button id="editButton" onClick={handleEdit}>Edit</button>
         </div>
-        </>
-    )
+    );
 }

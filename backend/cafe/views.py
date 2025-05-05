@@ -147,3 +147,63 @@ class RecipeListCreateAPIView(generics.ListCreateAPIView):
             queryset = queryset.filter(recipe_name__name__icontains=recipe_name)
 
         return queryset
+
+class EmployeeDeleteAPIView(APIView):
+    """
+    Delete an employee (Barista or Manager) using their SSN via query param.
+    Example: DELETE /api/employees/delete/?ssn=123-45-6789
+    """
+
+    def delete(self, request):
+        ssn = request.query_params.get('ssn', None)
+        if not ssn:
+            return Response({'error': 'SSN parameter is required'})
+        try:
+            # Try deleting Barista
+            employee = Barista.objects.filter(ssn=ssn).first()
+            if employee:
+                employee.delete()
+                return Response({'message': 'Barista deleted successfully'})
+
+            # Try deleting Manager
+            employee = Manager.objects.filter(ssn=ssn).first()
+            if employee:
+                employee.delete()
+                return Response({'message': 'Manager deleted successfully'})
+
+            return Response({'error': 'Employee not found'})
+
+        except Exception as e:
+            return Response({'error': str(e)})
+        
+class UpdateSalaryAPIView(APIView):
+    """
+    Update the salary of an employee using their SSN via query param.
+    Example: PUT /api/employees/update-salary/?ssn=123-45-6789
+    """
+    
+    def put(self, request):
+        ssn = request.query_params.get('ssn', None)
+        salary = request.data.get('salary', None)
+        
+        if not ssn or not salary:
+            return Response({'error': 'SSN and salary are required'})
+
+        try:
+            # Try to find Barista
+            employee = Barista.objects.filter(ssn=ssn).first()
+            if not employee:
+                # If no Barista, try finding Manager
+                employee = Manager.objects.filter(ssn=ssn).first()
+            
+            if not employee:
+                return Response({'error': 'Employee not found'})
+            
+            # Update salary
+            employee.salary = salary
+            employee.save()
+            
+            return Response({'message': 'Salary updated successfully'})
+        
+        except Exception as e:
+            return Response({'error': str(e)})
