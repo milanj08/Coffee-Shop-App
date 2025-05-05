@@ -83,6 +83,108 @@ class SaleListCreateAPIView(generics.ListCreateAPIView):
     queryset = Sale.objects.all()
     serializer_class = SaleSerializer
 
+class RecordSaleAPIView(APIView):
+    def post(self, request):
+        print("Full request data:", request.data)
+        items = request.data.get('items', [])
+        total_earnings = request.data.get('total')
+        payment_method = request.data.get('payment_method')
+
+        if not items:
+            return Response({'error': 'Missing items'}, status=400)
+        if total_earnings is None:
+            return Response({'error': 'Missing total earnings'}, status=400)
+        if not payment_method or not isinstance(payment_method, str):
+            return Response({'error': 'Missing or invalid payment method'}, status=400)
+
+        # Tracks how much of each ingredient we used in our order
+        espressoUsed = 0.0
+        milkUsed = 0.0
+        chocUsed = 0.0
+
+        # Iterate over items to ensure correct drink data
+        for item in items:
+            drink_name = item.get('drink_name')
+            quantity = item.get('quantity', 0)
+
+            # Look up our menu item 
+            try:
+                # Find which drink we have, and calculate how much of each ingredient we used
+                drink = Menu.objects.get(name__iexact=drink_name)
+                if drink_name == "Mocha":
+                    espressoUsed += 2.0 * quantity
+                    # Convert ml to L
+                    milkUsed += (150.00 * quantity) / 1000
+                    chocUsed += 80.00 * quantity
+                elif drink_name == "Latte":
+                    # Convert ml to L
+                    milkUsed += (150.00 * quantity) / 1000
+            except Menu.DoesNotExist:
+                return Response({'error': f"Drink '{drink_name}' not found in the menu."})
+
+            # Create the Sale
+            Sale.objects.create(
+                time=datetime.now().time(),
+                day=date.today(),
+                quantity=quantity,
+                drink=drink,
+                payment_method=payment_method)
+
+
+        # Remove from our inventory how much we milk/espresso/chocolate syrup we used
+        try:
+            if espressoUsed > 0:
+                espresso_item = InventoryManagement.objects.get(name="Espresso")
+
+                if espresso_item.quantity < espressoUsed:
+                    espresso_item.quantity = 0
+                else:
+                    espresso_item.quantity -= espressoUsed
+                espresso_item.save()
+
+            if milkUsed > 0:
+                milk_item = InventoryManagement.objects.get(name="Milk")
+
+                if milk_item.quantity < milkUsed:
+                    milk_item.quantity = 0
+                else:
+                    milk_item.quantity -= milkUsed
+                milk_item.save()
+
+            if chocUsed > 0:
+                choc_item = InventoryManagement.objects.get(name="Chocolate Syrup")
+
+                if choc_item.quantity < chocUsed:
+                    choc_item.quantity = 0
+                else:
+                    choc_item.quantity -= chocUsed
+                choc_item.save()
+
+        except InventoryManagement.DoesNotExist as e:
+            return Response({'error': f"Ingredient '{e}' not found in inventory."})
+
+        # Update the account balance
+        total_earnings = Decimal(total_earnings)
+        latest_entry = Accounting.objects.all().order_by('-day', '-time').first()
+        current_balance = latest_entry.account_balance if latest_entry else Decimal("0.00")
+        new_balance = current_balance + total_earnings
+
+        # Make sure the balance doesn't go negative
+        if new_balance < 0:
+            new_balance = Decimal("0.00")
+
+        # Create a new accounting entry
+        Accounting.objects.create(
+            account_balance=new_balance,
+            day=date.today(),
+            time=datetime.now().time()
+        )
+
+        return Response({
+            'message': 'Sale recorded and account updated',
+            'new_balance': str(new_balance)
+        })
+        
 
 class AccountingListCreateAPIView(generics.ListCreateAPIView):
     queryset = Accounting.objects.all()

@@ -53,8 +53,12 @@ const BaristaHome = () => {
       
         // Used to store all recipes and their steps
         const allRecipes = [];
-      
         
+        let total = 0;
+        
+        // For each item the customer ordered:
+        // Calculate the total sale
+        // Get the steps for each recipe
         for (const item of orderItems) {
             const name = item.name;
             const quantity = item.quantity;
@@ -78,6 +82,14 @@ const BaristaHome = () => {
                     }));
                     allRecipes.push(...indexedRecipeData);
                 }
+
+                // Get price of current drink
+                const recipeResponse = await axios.get(`http://localhost:8000/api/menu/?name=${encodeURIComponent(name)}`);
+                const drink = recipeResponse.data[0];
+
+                // Save the cost of the drink to our total sale
+                const unitPrice = parseFloat(drink.price);
+                total += unitPrice * quantity;
             } catch (error) {
                 console.error(`Error fetching recipe for ${name}:`, error);
                 alert(`Failed to fetch recipe for ${name}`);
@@ -89,7 +101,31 @@ const BaristaHome = () => {
             alert("No valid recipes found.");
             return;
         }
+
+
+        // Record sales in the backend
+        const salePayload = {
+            time: now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
+            day: new Date().toISOString().split('T')[0],
+            total, // Include the total here instead of sending per-item info
+            payment_method: paymentMethod.toLowerCase(),
+            items: orderItems.map(item => ({
+                drink_name: item.name,
+                quantity: parseInt(item.quantity, 10),
+            })),
+        };
+
+        console.log("Sale payload:", salePayload);
     
+        try {
+            const saleMade = await axios.post("http://localhost:8000/api/sales/record-sale", salePayload);
+            console.log("SALE MADE:", saleMade);
+        } catch (error) {
+            console.error(`Failed to record sale:`, error);
+            alert('Failed to record sale');
+            return;
+        }
+            
         console.log("All Recipes:", allRecipes);
         setRecipes(allRecipes);
         navigate('/baristaRecipe');
