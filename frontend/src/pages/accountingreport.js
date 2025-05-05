@@ -1,13 +1,30 @@
-import React from 'react';
+import React, { useEffect, useState } from 'react';
+import axios from 'axios';
 import BackButton from '../components/backbutton';
 import './accountingreport.css';
 
 export default function AccountingReport() {
-    const dummyData = [
-        { timestamp: '2025-05-01 10:00:00', balance: '$5,000.00' },
-        { timestamp: '2025-05-02 14:30:00', balance: '$5,500.00' },
-        { timestamp: '2025-05-03 09:15:00', balance: '$6,000.00' },
-    ];
+    const [data, setData] = useState([]);
+    const [error, setError] = useState(null);
+
+    useEffect(() => {
+        const fetchData = async () => {
+            try {
+                const response = await axios.get('http://localhost:8000/api/accounting/'); 
+                const transformedData = response.data.map((entry) => ({
+                    ...entry,
+                    timestamp: `${entry.day} ${entry.time}`,
+                }));
+                setData(transformedData);
+            } catch (err) {
+                setError('Error fetching data');
+            }
+        };
+
+        fetchData();
+    }, []);
+
+    if (error) return <div>{error}</div>;
 
     return (
         <>
@@ -23,16 +40,22 @@ export default function AccountingReport() {
                         <thead>
                             <tr>
                                 <th>Timestamp</th>
-                                <th>Balance</th>
+                                <th>Account Balance</th>
                             </tr>
                         </thead>
                         <tbody>
-                            {dummyData.map((entry, index) => (
-                                <tr key={index}>
-                                    <td>{entry.timestamp}</td>
-                                    <td>{entry.balance}</td>
+                            {data.length > 0 ? (
+                                data.map((entry, index) => (
+                                    <tr key={index}>
+                                        <td>{entry.timestamp}</td>
+                                        <td>{entry.account_balance}</td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan="2">No data available</td>
                                 </tr>
-                            ))}
+                            )}
                         </tbody>
                     </table>
                 </div>
