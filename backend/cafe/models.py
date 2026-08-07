@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 from django.core.exceptions import ValidationError
 
@@ -9,6 +10,42 @@ class Employee(models.Model):
     last_name = models.CharField(max_length=255)
     email = models.CharField(max_length=255)
     salary = models.DecimalField(max_digits=10, decimal_places=2)
+
+    # Login identity, kept separate from employment data. Django's User owns
+    # the username and the hashed password; Employee owns SSN, salary, and who
+    # this person is to the business. They answer different questions.
+    #
+    # SET_NULL rather than CASCADE: deleting a login should not erase the
+    # employment record. null=True because employees can exist before they have
+    # an account - the five in the demo fixture predate this feature.
+    user = models.OneToOneField(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='employee',
+    )
+
+    @property
+    def role(self):
+        """Derived from the specialization tables, not stored anywhere.
+
+        The schema already encodes this: a Barista row means barista, a Manager
+        row means manager. Adding a `role` column would create a second source
+        of truth that can disagree with these tables.
+
+        `hasattr` on a reverse one-to-one returns False when the row is absent,
+        because the descriptor raises RelatedObjectDoesNotExist.
+
+        Manager is checked first, so an employee holding both rows is treated
+        as a manager. Nothing currently prevents an employee having both, or
+        neither - a known gap, noted in the README.
+        """
+        if hasattr(self, 'manager'):
+            return 'manager'
+        if hasattr(self, 'barista'):
+            return 'barista'
+        return None
 
 # --- Baristas ---
 class Barista(models.Model):

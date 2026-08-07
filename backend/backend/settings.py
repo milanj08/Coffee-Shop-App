@@ -39,6 +39,8 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'cafe',
     'rest_framework',
+    # Provides the Token model and its table. Required by TokenAuthentication.
+    'rest_framework.authtoken',
     'corsheaders',
 ]
 
@@ -59,8 +61,35 @@ MIDDLEWARE = [
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
 ]
 
-REST_FRAMEWORK = {'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.AllowAny'],}
-CORS_ORIGIN_ALLOW_ALL = True
+REST_FRAMEWORK = {
+    # Every request is identified by an "Authorization: Token <key>" header.
+    # Chosen over SessionAuthentication because the frontend is a separate
+    # origin, and cookies across origins need CORS-with-credentials plus CSRF
+    # handling. The trade-off is that DRF tokens never expire on their own,
+    # which is why logging out has to delete the token server-side.
+    'DEFAULT_AUTHENTICATION_CLASSES': [
+        'rest_framework.authentication.TokenAuthentication',
+    ],
+    # Was AllowAny, which meant a new endpoint was public unless somebody
+    # remembered otherwise. Defaulting to IsAuthenticated makes the mistake
+    # fail closed instead: forget a permission class and the endpoint is
+    # locked, not exposed.
+    'DEFAULT_PERMISSION_CLASSES': [
+        'rest_framework.permissions.IsAuthenticated',
+    ],
+}
+
+# Was CORS_ORIGIN_ALLOW_ALL = True, which let any page on the internet call
+# this API from a visitor's browser. A whitelist of the frontend's origin is
+# what that setting should always have been.
+#
+# Note this is not a security control - CORS is enforced by browsers, and curl
+# ignores it entirely. The permission classes are what actually protect the
+# API; this stops a hostile page using a logged-in user's browser as a proxy.
+CORS_ALLOWED_ORIGINS = [
+    'http://localhost:3000',
+    'http://127.0.0.1:3000',
+]
 
 ROOT_URLCONF = 'backend.urls'
 

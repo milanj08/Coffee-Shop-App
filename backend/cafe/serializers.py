@@ -1,3 +1,11 @@
+import random
+from datetime import date, time
+from decimal import Decimal
+
+from django.contrib.auth.models import User
+from django.contrib.auth.password_validation import validate_password
+from django.core.exceptions import ValidationError as DjangoValidationError
+from django.db import transaction
 from rest_framework import serializers
 from .models import (Employee, Barista, Manager, InventoryManagement, Menu,
                      Promotion, Sale, Accounting, Recipe)
@@ -103,6 +111,106 @@ class RecipeSerializer(serializers.ModelSerializer):
                 )
             })
         return data
+
+
+class AccountSerializer(serializers.Serializer):
+    """The shape returned by login and by /api/auth/me/.
+
+    Read-only. `role` is derived from the Barista/Manager tables on every
+    request - it is never sent by the client and never stored on the User.
+    """
+
+    username = serializers.CharField(source='user.username', read_only=True)
+    first_name = serializers.CharField(read_only=True)
+    last_name = serializers.CharField(read_only=True)
+    email = serializers.CharField(read_only=True)
+    role = serializers.CharField(read_only=True)
+
+
+def _allocate_placeholder_ssn():
+    """Invent an unused employee key for a self-registered account.
+
+    This function exists only because SSN is the primary key of Employee. A
+    surrogate integer key would make it unnecessary, which is one more argument
+    for the change noted in the README. A manager sets the real value later.
+    """
+    for _ in range(20):
+        candidate = Decimal(random.randint(100000000, 999999999))
+        if not Employee.objects.filter(pk=candidate).exists():
+            return candidate
+    raise serializers.ValidationError(
+        'Could not allocate an employee record. Try again.'
+    )
+
+
+class RegisterSerializer(serializers.Serializer):
+    """Self-service signup, which always produces a barista.
+
+    Deliberately has no `role` field. The original bug was that the client
+    decided the role; letting a registration payload ask for 'manager' would
+    reintroduce it with extra steps. Manager accounts are created by a manager,
+    or seeded in the demo fixture.
+    """
+
+    username = serializers.CharField(max_length=150)
+    password = serializers.CharField(write_only=True, style={'input_type': 'password'})
+    first_name = serializers.CharField(max_length=255)
+    last_name = serializers.CharField(max_length=255)
+    email = serializers.EmailField()
+
+    def validate_username(self, value):
+        if User.objects.filter(username__iexact=value).exists():
+            raise serializers.ValidationError('That username is already taken.')
+        return value
+
+    def validate_password(self, value):
+        """Run Django's configured password validators.
+
+        AUTH_PASSWORD_VALIDATORS has been sitting in settings.py unused since
+        the project was generated, because the old login never touched Django's
+        auth system. This is what turns it on.
+        """
+        try:
+            validate_password(value)
+        except DjangoValidationError as error:
+            raise serializers.ValidationError(list(error.messages))
+        return value
+
+    @transaction.atomic
+    def create(self, validated_data):
+        """Three inserts, all or nothing.
+
+        Without the transaction a failure partway leaves a User with no
+        Employee, or an Employee with no Barista row - which Employee.role
+        reads as "no role", so the account would authenticate and then be
+        denied everywhere with no obvious cause.
+        """
+        user = User.objects.create_user(
+            username=validated_data['username'],
+            password=validated_data['password'],
+            first_name=validated_data['first_name'],
+            last_name=validated_data['last_name'],
+            email=validated_data['email'],
+        )
+
+        employee = Employee.objects.create(
+            ssn=_allocate_placeholder_ssn(),
+            first_name=validated_data['first_name'],
+            last_name=validated_data['last_name'],
+            email=validated_data['email'],
+            salary=Decimal('0.00'),
+            user=user,
+        )
+
+        # The Barista row IS the role. No separate column to keep in sync.
+        Barista.objects.create(
+            ssn=employee,
+            day=date.today(),
+            start_time=time(9, 0),
+            end_time=time(17, 0),
+        )
+
+        return employee
 
 
 class SaleItemSerializer(serializers.Serializer):

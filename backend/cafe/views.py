@@ -18,9 +18,24 @@ from .serializers import (
 from .services import (
     record_sale, MenuItemNotFound, IngredientNotStocked, InsufficientStock
 )
+from .permissions import IsManager, IsManagerOrReadOnly, IsStaff
+
+# Every view below declares permission_classes explicitly.
+#
+# settings.py now defaults to IsAuthenticated, so forgetting one fails closed
+# rather than open - the opposite of the previous AllowAny default, where a new
+# endpoint was public unless you remembered otherwise. Stating it on each view
+# anyway means you can read a class and know who may call it without going to
+# settings.
+#
+#   IsStaff             any signed-in employee
+#   IsManagerOrReadOnly employees may read, managers may write
+#   IsManager           managers only
 
 
 class BaristaListCreateAPIView(generics.ListCreateAPIView):
+    # Employee records: names, emails, SSNs, shifts. Managers only.
+    permission_classes = [IsManager]
     serializer_class = BaristaSerializer
 
     def get_queryset(self):
@@ -35,6 +50,8 @@ class BaristaListCreateAPIView(generics.ListCreateAPIView):
 
 
 class ManagerListCreateAPIView(generics.ListCreateAPIView):
+    # POST here creates a manager, so this is the privilege-escalation route.
+    permission_classes = [IsManager]
     serializer_class = ManagerSerializer
 
     def get_queryset(self):
@@ -49,11 +66,16 @@ class ManagerListCreateAPIView(generics.ListCreateAPIView):
 
 
 class InventoryListCreateAPIView(generics.ListCreateAPIView):
+    # A barista needs to see stock levels; only a manager adds new items.
+    permission_classes = [IsManagerOrReadOnly]
     queryset = InventoryManagement.objects.all()
     serializer_class = InventoryManagementSerializer
 
 # Handles updating quantity of an item in our inventory
 class UpdateInventoryAPIView(APIView):
+    # Restocking moves money and stock. Managers only.
+    permission_classes = [IsManager]
+
     def patch(self, request):
         # Checking if our data was sent properly
         print("Received data:", request.data)
@@ -74,6 +96,8 @@ class UpdateInventoryAPIView(APIView):
 
 
 class MenuListCreateAPIView(generics.ListCreateAPIView):
+    # Baristas read the menu constantly; changing prices is a manager decision.
+    permission_classes = [IsManagerOrReadOnly]
     serializer_class = MenuSerializer
 
     def get_queryset(self):
@@ -97,11 +121,14 @@ class MenuListCreateAPIView(generics.ListCreateAPIView):
 
 
 class PromotionListCreateAPIView(generics.ListCreateAPIView):
+    permission_classes = [IsManagerOrReadOnly]
     queryset = Promotion.objects.all()
     serializer_class = PromotionSerializer
 
 
 class SaleListCreateAPIView(generics.ListCreateAPIView):
+    # Sales history is a reporting view, not something a barista needs.
+    permission_classes = [IsManager]
     queryset = Sale.objects.all()
     serializer_class = SaleSerializer
 
@@ -111,6 +138,9 @@ class RecordSaleAPIView(APIView):
     Three lines of responsibility: validate the payload, call the service,
     translate its exceptions into status codes. No business rules live here.
     """
+
+    # The one write a barista is meant to perform.
+    permission_classes = [IsStaff]
 
     def post(self, request):
         serializer = RecordSaleSerializer(data=request.data)
@@ -152,10 +182,14 @@ class RecordSaleAPIView(APIView):
 
 
 class AccountingListCreateAPIView(generics.ListCreateAPIView):
+    # The books. Managers only.
+    permission_classes = [IsManager]
     queryset = Accounting.objects.all()
     serializer_class = AccountingSerializer
 
 class CurrentBankAmountAPIView(APIView):
+    permission_classes = [IsManager]
+
     # Used when a purchase is made in inventory management
     def post(self, request):
         # Gets how much our total purchase came out to
@@ -209,6 +243,9 @@ class CurrentBankAmountAPIView(APIView):
 
 
 class RecipeListCreateAPIView(generics.ListCreateAPIView):
+    # A barista must read recipe steps to make the drink; editing a recipe
+    # changes what gets deducted from stock, so that is a manager action.
+    permission_classes = [IsManagerOrReadOnly]
     serializer_class = RecipeSerializer
 
     def get_queryset(self):
@@ -226,6 +263,8 @@ class EmployeeDeleteAPIView(APIView):
     Delete an employee (Barista or Manager) using their SSN via query param.
     Example: DELETE /api/employees/delete/?ssn=123-45-6789
     """
+
+    permission_classes = [IsManager]
 
     def delete(self, request):
         ssn = request.query_params.get('ssn', None)
@@ -254,6 +293,8 @@ class UpdateSalaryAPIView(APIView):
     Update the salary of an Employee (Barista or Manager) using their SSN via query param.
     Example: PUT /api/employees/update-salary/?ssn=123-45-6789
     """
+
+    permission_classes = [IsManager]
 
     def put(self, request):
         ssn = request.query_params.get('ssn')

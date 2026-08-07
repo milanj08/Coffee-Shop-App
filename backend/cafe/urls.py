@@ -1,4 +1,10 @@
 from django.urls import path
+from .auth_views import (
+    LoginAPIView,
+    LogoutAPIView,
+    MeAPIView,
+    RegisterAPIView,
+)
 from .views import (
     BaristaListCreateAPIView,
     ManagerListCreateAPIView,
@@ -16,6 +22,13 @@ from .views import (
 )
 
 urlpatterns = [
+    # --- Authentication ---
+    path('auth/register/', RegisterAPIView.as_view(), name='auth-register'),
+    path('auth/login/', LoginAPIView.as_view(), name='auth-login'),
+    path('auth/logout/', LogoutAPIView.as_view(), name='auth-logout'),
+    path('auth/me/', MeAPIView.as_view(), name='auth-me'),
+
+    # --- Cafe ---
     path('baristas/', BaristaListCreateAPIView.as_view(), name='baristas'),
     path('managers/', ManagerListCreateAPIView.as_view(), name='managers'),
     path('inventory/', InventoryListCreateAPIView.as_view(), name='inventory'),
