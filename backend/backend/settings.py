@@ -44,13 +44,19 @@ INSTALLED_APPS = [
 
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
+    # CorsMiddleware must sit above any middleware that can return a response
+    # on its own - CommonMiddleware's APPEND_SLASH redirect in particular.
+    # Middleware below a short-circuit never runs, so CORS headers would be
+    # missing from that redirect and the browser would reject it. Harmless with
+    # simple GETs; breaks as soon as requests carry an Authorization header and
+    # the browser starts sending preflight OPTIONS.
+    'corsheaders.middleware.CorsMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
-    'corsheaders.middleware.CorsMiddleware',
 ]
 
 REST_FRAMEWORK = {'DEFAULT_PERMISSION_CLASSES': ['rest_framework.permissions.AllowAny'],}

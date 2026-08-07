@@ -53,16 +53,22 @@ python -m venv venv
 source venv/bin/activate        # Windows: venv\Scripts\activate
 pip install -r requirements_backend.txt
 python manage.py migrate
+python manage.py loaddata demo
 python manage.py runserver
 ```
 
-Runs on `http://localhost:8000`.
+Runs on `http://localhost:8000`. `loaddata demo` seeds a menu, ingredients,
+recipes, employees, and a starting account balance so the screens aren't empty.
 
-> **Note:** the committed `settings.py` points at SQLite. The project was developed
-> against PostgreSQL (see `psycopg2` in requirements), with each developer configuring
-> their own local instance — that configuration was never committed. Update
-> `DATABASES` in `backend/backend/settings.py` to point at your own Postgres instance,
-> or leave it on SQLite to run without setup.
+> **On the database.** This runs on SQLite so it can be cloned and started without
+> installing a database server. PostgreSQL was the original course requirement and
+> `psycopg2` was pinned in the requirements file, but `settings.py` has configured
+> SQLite in every commit — the project was in fact developed against SQLite.
+>
+> One consequence worth knowing: `select_for_update()` in `cafe/services.py` is a
+> **no-op on SQLite**. The row locking that prevents two concurrent sales from
+> losing an inventory deduction is written correctly but only enforced on
+> PostgreSQL or MySQL, which is what this would be deployed against.
 
 **Frontend**
 

@@ -1,0 +1,211 @@
+[
+{
+  "model": "cafe.menu",
+  "pk": "Latte",
+  "fields": {
+    "size": "350.00",
+    "type": "coffee",
+    "price": "4.50",
+    "hot_cold": "hot"
+  }
+},
+{
+  "model": "cafe.menu",
+  "pk": "Mocha",
+  "fields": {
+    "size": "350.00",
+    "type": "coffee",
+    "price": "5.50",
+    "hot_cold": "hot"
+  }
+},
+{
+  "model": "cafe.inventorymanagement",
+  "pk": "Espresso",
+  "fields": {
+    "unit": "g",
+    "quantity": "2000.00",
+    "price": "0.50"
+  }
+},
+{
+  "model": "cafe.inventorymanagement",
+  "pk": "Milk",
+  "fields": {
+    "unit": "ml",
+    "quantity": "19000.00",
+    "price": "3.50"
+  }
+},
+{
+  "model": "cafe.inventorymanagement",
+  "pk": "Chocolate Syrup",
+  "fields": {
+    "unit": "ml",
+    "quantity": "589.00",
+    "price": "6.50"
+  }
+},
+{
+  "model": "cafe.recipe",
+  "pk": 1,
+  "fields": {
+    "recipe_name": "Latte",
+    "ingredient_name": "Espresso",
+    "ingredient_quantity": "18.00",
+    "ingredient_unit": "g",
+    "position_number": 1,
+    "execution_description": "Pull a double shot into the cup."
+  }
+},
+{
+  "model": "cafe.recipe",
+  "pk": 2,
+  "fields": {
+    "recipe_name": "Latte",
+    "ingredient_name": "Milk",
+    "ingredient_quantity": "300.00",
+    "ingredient_unit": "ml",
+    "position_number": 2,
+    "execution_description": "Steam the milk and pour it over the espresso."
+  }
+},
+{
+  "model": "cafe.recipe",
+  "pk": 3,
+  "fields": {
+    "recipe_name": "Mocha",
+    "ingredient_name": "Espresso",
+    "ingredient_quantity": "18.00",
+    "ingredient_unit": "g",
+    "position_number": 1,
+    "execution_description": "Pull a double shot into a mug."
+  }
+},
+{
+  "model": "cafe.recipe",
+  "pk": 4,
+  "fields": {
+    "recipe_name": "Mocha",
+    "ingredient_name": "Chocolate Syrup",
+    "ingredient_quantity": "30.00",
+    "ingredient_unit": "ml",
+    "position_number": 2,
+    "execution_description": "Stir the chocolate syrup into the espresso."
+  }
+},
+{
+  "model": "cafe.recipe",
+  "pk": 5,
+  "fields": {
+    "recipe_name": "Mocha",
+    "ingredient_name": "Milk",
+    "ingredient_quantity": "200.00",
+    "ingredient_unit": "ml",
+    "position_number": 3,
+    "execution_description": "Steam the milk and pour it over the top."
+  }
+},
+{
+  "model": "cafe.employee",
+  "pk": "121212121",
+  "fields": {
+    "first_name": "Michael",
+    "last_name": "James",
+    "email": "mjames@example.com",
+    "salary": "9500.00"
+  }
+},
+{
+  "model": "cafe.employee",
+  "pk": "123456789",
+  "fields": {
+    "first_name": "Alice",
+    "last_name": "Smith",
+    "email": "alice@example.com",
+    "salary": "50000.00"
+  }
+},
+{
+  "model": "cafe.employee",
+  "pk": "232323234",
+  "fields": {
+    "first_name": "Miles",
+    "last_name": "Jones",
+    "email": "mjones@example.com",
+    "salary": "6000.00"
+  }
+},
+{
+  "model": "cafe.employee",
+  "pk": "555555555",
+  "fields": {
+    "first_name": "Alex",
+    "last_name": "Smith",
+    "email": "asmith2@yahoo.com",
+    "salary": "30000.00"
+  }
+},
+{
+  "model": "cafe.employee",
+  "pk": "987654321",
+  "fields": {
+    "first_name": "Bob",
+    "last_name": "Johnson",
+    "email": "bob.johnson@example.com",
+    "salary": "60000.00"
+  }
+},
+{
+  "model": "cafe.barista",
+  "pk": "123456789",
+  "fields": {
+    "day": "2025-05-01",
+    "start_time": "08:00:00",
+    "end_time": "16:00:00"
+  }
+},
+{
+  "model": "cafe.barista",
+  "pk": "232323234",
+  "fields": {
+    "day": "2025-05-01",
+    "start_time": "08:00:00",
+    "end_time": "16:00:00"
+  }
+},
+{
+  "model": "cafe.barista",
+  "pk": "555555555",
+  "fields": {
+    "day": "2025-05-01",
+    "start_time": "08:00:00",
+    "end_time": "16:00:00"
+  }
+},
+{
+  "model": "cafe.barista",
+  "pk": "987654321",
+  "fields": {
+    "day": "2025-05-02",
+    "start_time": "09:00:00",
+    "end_time": "17:00:00"
+  }
+},
+{
+  "model": "cafe.manager",
+  "pk": "121212121",
+  "fields": {
+    "percentage_ownership": "25.50"
+  }
+},
+{
+  "model": "cafe.accounting",
+  "pk": 1,
+  "fields": {
+    "day": "2026-08-06",
+    "time": "09:00:00",
+    "account_balance": "50000.00"
+  }
+}
+]

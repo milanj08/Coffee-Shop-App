@@ -1,5 +1,14 @@
-asgiref==3.8.1
-Django==5.2
-djangorestframework==3.16.0
-psycopg2==2.9.10
-sqlparse==0.5.3
+asgiref>=3.8.1
+# 5.2.8 is the first release supporting Python 3.13/3.14. Pinned to the 5.2 LTS
+# line rather than an exact patch so a fresh clone installs a version that runs
+# on a current interpreter.
+Django>=5.2.8,<6
+djangorestframework>=3.16.0
+# Listed in INSTALLED_APPS, so the project will not start without it. It was
+# missing from this file entirely.
+django-cors-headers>=4.9.0
+sqlparse>=0.5.3
+# psycopg2==2.9.10 was pinned here but never used - settings.py has always
+# configured SQLite. It also needs a C compiler and PostgreSQL headers to
+# install, so it broke `pip install -r` on Windows for a driver the project
+# does not load. If this moves to PostgreSQL, add psycopg2-binary instead.
