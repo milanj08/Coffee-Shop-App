@@ -1,5 +1,6 @@
 import React, { useState } from 'react'
 import BackButton from '../components/backbutton'
+import { API_BASE_URL } from '../config';
 
 export default function AddEmployee() {
     const [first_name, setFirstName] = useState('')
@@ -10,7 +11,7 @@ export default function AddEmployee() {
 
     const handleSubmit = async () => {
         try {
-            const response = await fetch('http://localhost:8000/api/baristas/', {
+            const response = await fetch(`${API_BASE_URL}baristas/`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

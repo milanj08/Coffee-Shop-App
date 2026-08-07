@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import BackButton from '../components/backbutton';
 import './editemployees.css';
+import { API_BASE_URL } from '../config';
 
 export default function EditEmployee() {
     const location = useLocation();
@@ -11,7 +12,7 @@ export default function EditEmployee() {
 
     const handleDelete = async () => {
         try {
-            const response = await fetch(`http://localhost:8000/api/employees/delete/?ssn=${encodeURIComponent(ssn)}`, {
+            const response = await fetch(`${API_BASE_URL}employees/delete/?ssn=${encodeURIComponent(ssn)}`, {
                 method: 'DELETE',
             });
 
@@ -34,7 +35,7 @@ export default function EditEmployee() {
         }
 
         try {
-            const response = await fetch(`http://localhost:8000/api/employees/update-salary/?ssn=${encodeURIComponent(ssn)}`, {
+            const response = await fetch(`${API_BASE_URL}employees/update-salary/?ssn=${encodeURIComponent(ssn)}`, {
                 method: 'PUT',
                 headers: {
                     'Content-Type': 'application/json',

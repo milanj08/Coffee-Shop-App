@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Box from '../components/Box.js';
 import BackButton from '../components/backbutton.js';
 import './employee.css';
+import { API_BASE_URL } from '../config';
 
 export default function Employees() {
     const navigate = useNavigate();
@@ -17,7 +18,7 @@ export default function Employees() {
     useEffect(() => {
         const fetchEmployees = async () => {
             try {
-                const response = await fetch('http://localhost:8000/api/baristas/');
+                const response = await fetch(`${API_BASE_URL}baristas/`);
                 if (!response.ok) {
                     throw new Error(`HTTP error! status: ${response.status}`);
                 }
