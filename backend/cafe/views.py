@@ -2,7 +2,7 @@ from django.shortcuts import render
 from rest_framework import serializers
 from rest_framework.views import APIView
 from rest_framework.response import Response
-from rest_framework import generics
+from rest_framework import generics, status
 from datetime import date, datetime
 from decimal import Decimal
 from .models import (
@@ -12,7 +12,11 @@ from .models import (
 from .serializers import (
     BaristaSerializer, ManagerSerializer, InventoryManagementSerializer,
     MenuSerializer, PromotionSerializer, SaleSerializer,
-    AccountingSerializer, RecipeSerializer, EmployeeSerializer
+    AccountingSerializer, RecipeSerializer, EmployeeSerializer,
+    RecordSaleSerializer
+)
+from .services import (
+    record_sale, MenuItemNotFound, IngredientNotStocked, InsufficientStock
 )
 
 
@@ -70,8 +74,26 @@ class UpdateInventoryAPIView(APIView):
 
 
 class MenuListCreateAPIView(generics.ListCreateAPIView):
-    queryset = Menu.objects.all()
     serializer_class = MenuSerializer
+
+    def get_queryset(self):
+        """Supports ?name=<drink>.
+
+        Previously this was a bare `queryset = Menu.objects.all()`, so the
+        query parameter was silently ignored and every menu item came back.
+        The frontend took data[0] from that, which meant every drink was
+        priced as whichever row happened to be first.
+
+        iexact, not icontains: this is a lookup for one specific drink, not a
+        search. "Latte" must not match "Iced Latte".
+        """
+        queryset = Menu.objects.all()
+
+        name = self.request.query_params.get('name', None)
+        if name:
+            queryset = queryset.filter(name__iexact=name)
+
+        return queryset
 
 
 class PromotionListCreateAPIView(generics.ListCreateAPIView):
@@ -84,107 +106,50 @@ class SaleListCreateAPIView(generics.ListCreateAPIView):
     serializer_class = SaleSerializer
 
 class RecordSaleAPIView(APIView):
+    """POST /api/sales/record-sale
+
+    Three lines of responsibility: validate the payload, call the service,
+    translate its exceptions into status codes. No business rules live here.
+    """
+
     def post(self, request):
-        print("Full request data:", request.data)
-        items = request.data.get('items', [])
-        total_earnings = request.data.get('total')
-        payment_method = request.data.get('payment_method')
+        serializer = RecordSaleSerializer(data=request.data)
+        # raise_exception=True lets DRF's handler produce the 400 and the
+        # field-keyed error body, instead of us assembling one by hand.
+        serializer.is_valid(raise_exception=True)
 
-        if not items:
-            return Response({'error': 'Missing items'}, status=400)
-        if total_earnings is None:
-            return Response({'error': 'Missing total earnings'}, status=400)
-        if not payment_method or not isinstance(payment_method, str):
-            return Response({'error': 'Missing or invalid payment method'}, status=400)
-
-        # Tracks how much of each ingredient we used in our order
-        espressoUsed = 0.0
-        milkUsed = 0.0
-        chocUsed = 0.0
-
-        # Iterate over items to ensure correct drink data
-        for item in items:
-            drink_name = item.get('drink_name')
-            quantity = item.get('quantity', 0)
-
-            # Look up our menu item 
-            try:
-                # Find which drink we have, and calculate how much of each ingredient we used
-                drink = Menu.objects.get(name__iexact=drink_name)
-                if drink_name == "Mocha":
-                    espressoUsed += 2.0 * quantity
-                    # Convert ml to L
-                    milkUsed += (150.00 * quantity) / 1000
-                    chocUsed += 80.00 * quantity
-                elif drink_name == "Latte":
-                    # Convert ml to L
-                    milkUsed += (150.00 * quantity) / 1000
-            except Menu.DoesNotExist:
-                return Response({'error': f"Drink '{drink_name}' not found in the menu."})
-
-            # Create the Sale
-            Sale.objects.create(
-                time=datetime.now().time(),
-                day=date.today(),
-                quantity=quantity,
-                drink=drink,
-                payment_method=payment_method)
-
-
-        # Remove from our inventory how much we milk/espresso/chocolate syrup we used
         try:
-            if espressoUsed > 0:
-                espresso_item = InventoryManagement.objects.get(name="Espresso")
+            result = record_sale(
+                items=serializer.validated_data['items'],
+                payment_method=serializer.validated_data['payment_method'],
+            )
+        except MenuItemNotFound as error:
+            return Response({'error': str(error)}, status=status.HTTP_404_NOT_FOUND)
+        except InsufficientStock as error:
+            # 409 Conflict: the request is well-formed but conflicts with the
+            # current state of the shop. Nothing was written.
+            return Response(
+                {'error': str(error), 'shortages': error.shortages},
+                status=status.HTTP_409_CONFLICT,
+            )
+        except IngredientNotStocked as error:
+            # A recipe references an ingredient with no inventory row. That is a
+            # data problem on our side, not a bad request.
+            return Response(
+                {'error': str(error)},
+                status=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            )
 
-                if espresso_item.quantity < espressoUsed:
-                    espresso_item.quantity = 0
-                else:
-                    espresso_item.quantity -= espressoUsed
-                espresso_item.save()
-
-            if milkUsed > 0:
-                milk_item = InventoryManagement.objects.get(name="Milk")
-
-                if milk_item.quantity < milkUsed:
-                    milk_item.quantity = 0
-                else:
-                    milk_item.quantity -= milkUsed
-                milk_item.save()
-
-            if chocUsed > 0:
-                choc_item = InventoryManagement.objects.get(name="Chocolate Syrup")
-
-                if choc_item.quantity < chocUsed:
-                    choc_item.quantity = 0
-                else:
-                    choc_item.quantity -= chocUsed
-                choc_item.save()
-
-        except InventoryManagement.DoesNotExist as e:
-            return Response({'error': f"Ingredient '{e}' not found in inventory."})
-
-        # Update the account balance
-        total_earnings = Decimal(total_earnings)
-        latest_entry = Accounting.objects.all().order_by('-day', '-time').first()
-        current_balance = latest_entry.account_balance if latest_entry else Decimal("0.00")
-        new_balance = current_balance + total_earnings
-
-        # Make sure the balance doesn't go negative
-        if new_balance < 0:
-            new_balance = Decimal("0.00")
-
-        # Create a new accounting entry
-        Accounting.objects.create(
-            account_balance=new_balance,
-            day=date.today(),
-            time=datetime.now().time()
+        return Response(
+            {
+                'message': 'Sale recorded and account updated',
+                'total': str(result['total']),
+                'new_balance': str(result['new_balance']),
+            },
+            status=status.HTTP_200_OK,
         )
 
-        return Response({
-            'message': 'Sale recorded and account updated',
-            'new_balance': str(new_balance)
-        })
-        
+
 
 class AccountingListCreateAPIView(generics.ListCreateAPIView):
     queryset = Accounting.objects.all()
@@ -203,7 +168,10 @@ class CurrentBankAmountAPIView(APIView):
         total_purchase = Decimal(total_purchase)
 
         # Gets our most recent accounting form based on the most recent day and time
-        latest_entry = Accounting.objects.all().order_by('-day', '-time').first()
+        # -id, not -day/-time: see the note in services.record_sale. Ordering an
+        # append-only balance log by its own recorded timestamp means one bad
+        # date poisons every subsequent read.
+        latest_entry = Accounting.objects.all().order_by('-id').first()
 
         # If we find an entry, subtract our total purchase from it
         # If we cant find one or it becomes a negative value, set it to 0.00
@@ -227,13 +195,16 @@ class CurrentBankAmountAPIView(APIView):
     def get(self, request):
         
          # Gets our most recent accounting form based on the most recent day and time
-        latest_entry = Accounting.objects.all().order_by('-day', '-time').first()
+        # -id, not -day/-time: see the note in services.record_sale. Ordering an
+        # append-only balance log by its own recorded timestamp means one bad
+        # date poisons every subsequent read.
+        latest_entry = Accounting.objects.all().order_by('-id').first()
         if latest_entry:
-            print("Current balance:", latest_entry.account_balance)
-            return Response({
-                'account_balance': latest_entry.account_balance
-            })
-        print("No accounting entries found. Returning 0.00")
+            # str(), so this endpoint returns the same type as every other
+            # one. DRF renders a bare Decimal as a JSON number, which drops the
+            # trailing zero - 50014.50 arrives as 50014.5. One endpoint giving
+            # a number while the rest give strings is a trap for the caller.
+            return Response({'account_balance': str(latest_entry.account_balance)})
         return Response({'account_balance': "0.00"})
 
 

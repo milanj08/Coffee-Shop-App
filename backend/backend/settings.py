@@ -111,7 +111,11 @@ AUTH_PASSWORD_VALIDATORS = [
 
 LANGUAGE_CODE = 'en-us'
 
-TIME_ZONE = 'UTC'
+# Datetimes are stored in UTC (USE_TZ below); this is the zone they are
+# converted to for display and for the local date/time a Sale is filed under.
+# With 'UTC' an 8pm Chicago sale was recorded as 01:59 the following day,
+# which files evening trade under tomorrow's date in any daily report.
+TIME_ZONE = 'America/Chicago'
 
 USE_I18N = True
 

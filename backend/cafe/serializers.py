@@ -84,3 +84,41 @@ class RecipeSerializer(serializers.ModelSerializer):
     class Meta:
         model = Recipe
         fields = '__all__'
+
+    def validate(self, data):
+        """A recipe must be written in the unit its ingredient is stocked in.
+
+        Object-level rather than field-level, because it compares two fields.
+        This is what makes unit mismatches impossible instead of converted:
+        milk stocked in ml and a recipe written in liters would otherwise
+        deduct 1000x too little and nothing would complain.
+        """
+        ingredient = data.get('ingredient_name')
+        unit = data.get('ingredient_unit')
+        if ingredient is not None and unit is not None and unit != ingredient.unit:
+            raise serializers.ValidationError({
+                'ingredient_unit': (
+                    f"Must be '{ingredient.unit}', the unit "
+                    f"'{ingredient.name}' is stocked in."
+                )
+            })
+        return data
+
+
+class SaleItemSerializer(serializers.Serializer):
+    """One line of an order."""
+
+    drink_name = serializers.CharField(max_length=30)
+    quantity = serializers.IntegerField(min_value=1)
+
+
+class RecordSaleSerializer(serializers.Serializer):
+    """The request body of POST /api/sales/record-sale.
+
+    Note what is absent: `total`. The frontend still sends one and it is
+    ignored. Price is computed server-side from Menu.price, because a client
+    that can name its own total can name zero.
+    """
+
+    items = SaleItemSerializer(many=True, allow_empty=False)
+    payment_method = serializers.ChoiceField(choices=Sale.PaymentMethod.choices)

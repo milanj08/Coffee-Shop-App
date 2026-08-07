@@ -1,298 +1,171 @@
-from .models import Employee, Barista, Manager, InventoryManagement, Menu, Promotion, Sale, Accounting, Recipe
-from django.core.exceptions import ValidationError
-from django.core.exceptions import ObjectDoesNotExist
+"""Business logic for the cafe.
 
-# Functions to add entries to tables
-def add_barista(ssn, first_name, last_name, email, salary, day, start_time, end_time):
-    try:
-        emp = Employee(
-            ssn=ssn,
-            first_name=first_name,
-            last_name=last_name,
-            email=email,
-            salary=salary
+Nothing in this module imports from `rest_framework` or touches an HTTP
+request. That is deliberate: the rules here can be exercised by a test, a
+management command, or a scheduled job without a web server involved, and the
+view's only job becomes translating exceptions into status codes.
+"""
+
+from collections import defaultdict
+from decimal import Decimal
+
+from django.db import transaction
+from django.utils import timezone
+
+from .models import Accounting, InventoryManagement, Menu, Recipe, Sale
+
+
+# --- Errors -----------------------------------------------------------------
+# Plain Python exceptions, not DRF ones. The view maps these to status codes;
+# the service stays unaware that HTTP exists.
+
+class SaleError(Exception):
+    """Base class for every reason a sale can be refused."""
+
+
+class MenuItemNotFound(SaleError):
+    def __init__(self, drink_name):
+        self.drink_name = drink_name
+        super().__init__(f"Menu item '{drink_name}' does not exist.")
+
+
+class IngredientNotStocked(SaleError):
+    """A recipe references an ingredient with no inventory row."""
+
+    def __init__(self, ingredient_name):
+        self.ingredient_name = ingredient_name
+        super().__init__(
+            f"Ingredient '{ingredient_name}' is required by a recipe but is not in inventory."
         )
-        emp.full_clean()
-        emp.save()
 
-        barista = Barista(
-            ssn=emp,
-            day=day,
-            start_time=start_time,
-            end_time=end_time
+
+class InsufficientStock(SaleError):
+    def __init__(self, shortages):
+        self.shortages = shortages
+        detail = "; ".join(
+            f"{s['ingredient']}: need {s['required']} {s['unit']}, have {s['available']}"
+            for s in shortages
         )
-        barista.full_clean()
-        barista.save()
+        super().__init__(f"Insufficient stock. {detail}")
 
-        return emp
-    except ValidationError as e:
-        print(f"Validation failed: {e}")
-        return None
 
-def add_manager(ssn, first_name, last_name, email, salary, percentage):
-    try:
-        emp = Employee(
-            ssn=ssn,
-            first_name=first_name,
-            last_name=last_name,
-            email=email,
-            salary=salary
-        )
-        emp.full_clean()
-        emp.save()
+# --- Sales ------------------------------------------------------------------
 
-        manager = Manager(
-            ssn=emp,
-            percentage_ownership=percentage
-        )
-        manager.full_clean()
-        manager.save()
+@transaction.atomic
+def record_sale(items, payment_method):
+    """Record an order, deduct its ingredients, and update the balance.
 
-        return emp
-    except ValidationError as e:
-        print(f"Validation failed: {e}")
-        return None
+    `items` is a list of {'drink_name': str, 'quantity': int}.
 
-def add_inventory_item(name, unit, quantity, price):
-    try:
-        item = InventoryManagement(
-            name=name,
-            unit=unit,
+    Either the whole order succeeds or nothing is written - the decorator opens
+    a transaction, and any exception raised below rolls the whole thing back.
+
+    Returns {'total': Decimal, 'new_balance': Decimal}.
+    """
+
+    # 1. Resolve every drink up front, so an unknown name fails before we touch
+    #    inventory rather than halfway through deducting.
+    ordered = []
+    for item in items:
+        name = item['drink_name']
+        try:
+            menu_item = Menu.objects.get(name__iexact=name)
+        except Menu.DoesNotExist:
+            raise MenuItemNotFound(name)
+        ordered.append((menu_item, item['quantity']))
+
+    # 2. Ask the Recipe table what each drink needs. This is the entire point of
+    #    the rewrite: no drink name appears anywhere in this function, so adding
+    #    a new drink through the UI requires zero code changes.
+    #
+    #    One query for every recipe in the order, grouped in Python, rather than
+    #    one query per drink.
+    recipes_by_drink = defaultdict(list)
+    recipe_rows = Recipe.objects.filter(
+        recipe_name__in=[menu_item for menu_item, _ in ordered]
+    ).select_related('ingredient_name')
+    for row in recipe_rows:
+        recipes_by_drink[row.recipe_name_id].append(row)
+
+    # 3. Total the requirement per ingredient across the whole order. Two drinks
+    #    that both use milk must be summed before we check stock, or each looks
+    #    affordable on its own while the pair is not.
+    required = defaultdict(Decimal)
+    for menu_item, quantity in ordered:
+        for row in recipes_by_drink[menu_item.pk]:
+            required[row.ingredient_name_id] += row.ingredient_quantity * quantity
+
+    # 4. Lock the inventory rows BEFORE reading the quantities we compare
+    #    against. Without this, two simultaneous sales both read the same stock
+    #    level, both compute a new one, and one deduction is silently lost.
+    #
+    #    Note: select_for_update() is a no-op on SQLite. The code is correct;
+    #    the race is only genuinely closed on MySQL or PostgreSQL.
+    stock = {
+        row.pk: row
+        for row in InventoryManagement.objects
+        .select_for_update()
+        .filter(pk__in=required.keys())
+    }
+
+    # 5. Check everything before writing anything. Report every shortage at once
+    #    so the barista isn't told about them one order attempt at a time.
+    shortages = []
+    for ingredient_name, amount in required.items():
+        row = stock.get(ingredient_name)
+        if row is None:
+            raise IngredientNotStocked(ingredient_name)
+        if row.quantity < amount:
+            shortages.append({
+                'ingredient': row.name,
+                'required': amount,
+                'available': row.quantity,
+                'unit': row.unit,
+            })
+    if shortages:
+        raise InsufficientStock(shortages)
+
+    # 6. Deduct. Stock is never floored at zero - step 5 guarantees it cannot go
+    #    negative, and clamping would have hidden the overdraw instead.
+    for ingredient_name, amount in required.items():
+        row = stock[ingredient_name]
+        row.quantity -= amount
+        row.save(update_fields=['quantity'])
+
+    # 7. Price the order from OUR data. The request body's `total`, if it sent
+    #    one, is ignored - the client does not get to say how much money it paid.
+    total = sum((menu_item.price * quantity for menu_item, quantity in ordered), Decimal('0.00'))
+
+    # 8. One Sale row per line item, each recording the price actually charged.
+    now = timezone.localtime()
+    for menu_item, quantity in ordered:
+        Sale.objects.create(
+            time=now.time(),
+            day=now.date(),
             quantity=quantity,
-            price=price
+            drink=menu_item,
+            payment_method=payment_method,
+            price_charged=menu_item.price,
         )
-        item.full_clean()
-        item.save()
-        return item
-    except ValidationError as e:
-        print(f"Validation failed: {e}")
-        return None
 
-def add_menu_item(name, size, drink_type, price, hot_cold):
-    try:
-        menu_item = Menu(
-            name=name,
-            size=size,
-            type=drink_type,
-            price=price,
-            hot_cold=hot_cold
-        )
-        menu_item.full_clean()
-        menu_item.save()
-        return menu_item
-    except ValidationError as e:
-        print(f"Validation failed: {e}")
-        return None
+    # 9. Append the new balance.
+    #
+    # Ordered by -id, not by -day/-time. Accounting is an append-only log, so
+    # "latest" means "most recently inserted" - and id is the only field that
+    # reliably says so. Ordering by the recorded timestamp trusts data that can
+    # be wrong: a single row with a bad date sorts to the top forever, and
+    # every later sale silently builds on a stale balance.
+    #
+    # That is not hypothetical. Before TIME_ZONE was corrected, an 8pm sale was
+    # stamped 01:59 the following day. Every sale afterwards added to that row
+    # instead of the real latest one, and the balance went down as trade came in.
+    latest = Accounting.objects.order_by('-id').first()
+    previous_balance = latest.account_balance if latest else Decimal('0.00')
+    new_balance = previous_balance + total
+    Accounting.objects.create(
+        day=now.date(),
+        time=now.time(),
+        account_balance=new_balance,
+    )
 
-def add_sale(sale_time, sale_day, quantity, drink_name, payment_method):
-    try:
-        drink = Menu.objects.get(name=drink_name)
-
-        sale = Sale(
-            time=sale_time,
-            day=sale_day,
-            quantity=quantity,
-            drink=drink,
-            payment_method=payment_method
-        )
-        sale.full_clean()
-        sale.save()
-
-        print("Sale successfully added.")
-        return sale
-
-    except Menu.DoesNotExist:
-        print(f"Menu item '{drink_name}' does not exist.")
-    except ValidationError as e:
-        print(f"Validation error: {e}")
-    return None
-
-def add_account_entry(day, time, balance):
-    try:
-        account_entry = Accounting(
-            day=day,
-            time=time,
-            account_balance=balance
-        )
-        account_entry.full_clean()
-        account_entry.save()
-        return account_entry
-    except ValidationError as e:
-        print(f"Validation failed: {e}")
-        return None
-
-def add_recipe_item(name, i_name, i_quantity, i_unit, pos_number, description):
-    try:
-        recipe = Recipe(
-            recipe_name=name,
-            ingredient_name=i_name,
-            ingredient_quantity=i_quantity,
-            ingredient_unit=i_unit,
-            position_number=pos_number,
-            execution_description=description
-        )
-        recipe.full_clean()
-        recipe.save()
-        return recipe
-    except ValidationError as e:
-        print(f"Validation failed: {e}")
-        return None
-
-def add_promotion(day, time, menu_name, promotion_price):
-    try:
-        menu_item = Menu.objects.get(name=menu_name)
-        promo = Promotion(
-            day=day,
-            time=time,
-            menu=menu_item,
-            promotion_price=promotion_price
-        )
-        promo.full_clean()  # Validate fields and unique constraint
-        promo.save()        # Save to DB
-        return promo
-    except Menu.DoesNotExist:
-        print(f"Menu item '{menu_name}' does not exist.")
-    except ValidationError as e:
-        print(f"Validation failed: {e}")
-    return None
-
-# Functions to delete entries from tables
-
-# Delete Menu Item
-def delete_menu_item(name):
-    try:
-        item = Menu.objects.get(name=name)
-        item.delete()
-        print(f"Deleted menu item: {name}")
-    except Menu.DoesNotExist:
-        print(f"Menu item '{name}' does not exist.")
-
-# Delete Barista by SSN
-def delete_barista(ssn):
-    try:
-        barista = Barista.objects.get(ssn__ssn=ssn)  # Link to Employee SSN
-        barista.delete()
-        Employee.objects.get(ssn=ssn).delete()  # Delete the Employee as well
-        print(f"Deleted barista with SSN {ssn}")
-    except ObjectDoesNotExist:
-        print(f"Barista with SSN {ssn} does not exist.")
-
-# Delete Manager by SSN
-def delete_manager(ssn):
-    try:
-        manager = Manager.objects.get(ssn__ssn=ssn)  # Link to Employee SSN
-        manager.delete()
-        Employee.objects.get(ssn=ssn).delete()  # Delete the Employee as well
-        print(f"Deleted manager with SSN {ssn}")
-    except ObjectDoesNotExist:
-        print(f"Manager with SSN {ssn} does not exist.")
-
-# Delete Employee by SSN
-def delete_employee(ssn):
-    try:
-        employee = Employee.objects.get(ssn=ssn)
-        employee.delete()
-        print(f"Deleted employee with SSN {ssn}")
-    except Employee.DoesNotExist:
-        print(f"Employee with SSN {ssn} does not exist.")
-
-# Delete Inventory Item by Name
-def delete_inventory_item(name):
-    try:
-        item = InventoryManagement.objects.get(name=name)
-        item.delete()
-        print(f"Deleted inventory item: {name}")
-    except InventoryManagement.DoesNotExist:
-        print(f"Inventory item '{name}' does not exist.")
-
-# Delete Promotion by Menu Item
-def delete_promotion(menu_name):
-    try:
-        promo = Promotion.objects.get(menu__name=menu_name)
-        promo.delete()
-        print(f"Deleted promotion for menu item: {menu_name}")
-    except Promotion.DoesNotExist:
-        print(f"Promotion for menu item '{menu_name}' does not exist.")
-
-# Delete Sale by Sale ID
-def delete_sale(sale_id):
-    try:
-        sale = Sale.objects.get(id=sale_id)
-        sale.delete()
-        print(f"Deleted sale with ID {sale_id}")
-    except Sale.DoesNotExist:
-        print(f"Sale with ID {sale_id} does not exist.")
-
-# Delete Accounting Entry by Day and Time
-def delete_account_entry(day, time):
-    try:
-        entry = Accounting.objects.get(day=day, time=time)
-        entry.delete()
-        print(f"Deleted accounting entry for {day} at {time}")
-    except Accounting.DoesNotExist:
-        print(f"No accounting entry found for {day} at {time}.")
-
-# Delete Recipe by Recipe Name
-def delete_recipe(recipe_name):
-    try:
-        Recipe.objects.filter(recipe_name__name=recipe_name).delete()
-        print(f"Deleted all recipe entries with name '{recipe_name}'")
-    except Exception as e:
-        print(f"Error deleting recipe: {e}")
-
-# Query all the tables
-def get_all_sales():
-    try:
-        all_sales = Sale.objects.all()  # Retrieves all Sale records
-        return all_sales
-    except Exception as e:
-        print(f"Error retrieving all sales: {e}")
-        return None
-
-def get_all_accounting_entries():
-    try:
-        all_entries = Accounting.objects.all()  # Retrieves all Accounting records
-        return all_entries
-    except Exception as e:
-        print(f"Error retrieving all accounting entries: {e}")
-        return None
-
-def get_all_menu_items():
-    try:
-        all_menu_items = Menu.objects.all()  # Retrieves all Menu records
-        return all_menu_items
-    except Exception as e:
-        print(f"Error retrieving all menu items: {e}")
-        return None
-
-def get_all_employees():
-    try:
-        all_employees = Employee.objects.all()  # Retrieves all Employee records
-        return all_employees
-    except Exception as e:
-        print(f"Error retrieving all employees: {e}")
-        return None
-
-def get_all_inventory_items():
-    try:
-        all_inventory_items = InventoryManagement.objects.all()  # Retrieves all InventoryManagement records
-        return all_inventory_items
-    except Exception as e:
-        print(f"Error retrieving all inventory items: {e}")
-        return None
-
-def get_all_promotions():
-    try:
-        all_promotions = Promotion.objects.all()  # Retrieves all Promotion records
-        return all_promotions
-    except Exception as e:
-        print(f"Error retrieving all promotions: {e}")
-        return None
-
-def get_all_recipes():
-    try:
-        all_recipes = Recipe.objects.all()  # Retrieves all Recipe records
-        return all_recipes
-    except Exception as e:
-        print(f"Error retrieving all recipes: {e}")
-        return None
+    return {'total': total, 'new_balance': new_balance}
