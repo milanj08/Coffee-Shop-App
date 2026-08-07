@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './managerHome';
 import './inventory.css';
+import { API_BASE_URL } from '../config';
 
 
 // 10% tax rate
@@ -74,11 +75,11 @@ const Inventory = () => {
     
         try {
             // Sends a message to the backend and prints the reponse to console
-            const response = await axios.patch('http://localhost:8000/api/inventory/update/', { order: orderItems }, {headers: {'Content-Type': 'application/json'}});
+            const response = await axios.patch(`${API_BASE_URL}inventory/update/`, { order: orderItems }, {headers: {'Content-Type': 'application/json'}});
             console.log(response.data);
 
             // Used to update our accounting balance based on how much we purchased
-            const accountBalanceResponse = await axios.post('http://localhost:8000/api/accounting/purchase/', { total_purchase: total }, {headers: {'Content-Type': 'application/json'}});
+            const accountBalanceResponse = await axios.post(`${API_BASE_URL}accounting/purchase/`, { total_purchase: total }, {headers: {'Content-Type': 'application/json'}});
             console.log(accountBalanceResponse.data);
 
             // Refresh our inventory and balance to reflect our purchase
@@ -96,7 +97,7 @@ const Inventory = () => {
     // Receive all inventory found in database
     const fetchInventory = async () => {
         try {
-            const response = await axios.get('http://localhost:8000/api/inventory/');
+            const response = await axios.get(`${API_BASE_URL}inventory/`);
             setInventoryItems(response.data);
             setQuantities(Array(response.data.length).fill(0));
         } catch (error) {
@@ -106,7 +107,7 @@ const Inventory = () => {
 
     const fetchAccountBalance = async () => {
         try {
-            const response = await axios.get('http://localhost:8000/api/accounting/check/');
+            const response = await axios.get(`${API_BASE_URL}accounting/check/`);
             setAccountBalance(response.data.account_balance);
         } catch (error) {
             console.error("Failed to fetch account balance:", error);
@@ -181,7 +182,10 @@ const Inventory = () => {
 
                 { /* Order Summary */ }
                 <div className="order-container">
-                    <h3>Current Balance: ${accountBalance}</h3>
+                    { /* Number(...).toFixed(2) so money always renders with two
+                         decimals. JSON has no trailing zeros, so 50014.50 comes
+                         back as 50014.5 and would display as "$50014.5". */ }
+                    <h3>Current Balance: ${Number(accountBalance).toFixed(2)}</h3>
                     <h3>Order Summary</h3>
 
 

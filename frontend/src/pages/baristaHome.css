@@ -46,8 +46,15 @@
 
 #bottomRow {
     display: grid;
-    grid-template-columns: 30vw 60vw;
+    /* Three columns now: pay button, order total, payment method.
+       Still sums to 90vw to match .ordered-items-container above. */
+    grid-template-columns: 30vw 22vw 38vw;
     background-color: #B0A7D0;
+}
+
+#orderTotal {
+    font-weight: bold;
+    white-space: nowrap;
 }
 
 
@@ -88,6 +95,7 @@
 .paymentField{
     justify-content: center;
     margin-bottom: 1vh;
-    width: 58vw;
+    /* Narrowed from 58vw to fit the new three-column bottomRow. */
+    width: 36vw;
 }
 

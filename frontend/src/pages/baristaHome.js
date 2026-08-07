@@ -1,11 +1,12 @@
 //Used to display the home page of the barista
-import React, { useContext, useState } from "react";
+import React, { useContext, useEffect, useState } from "react";
 import { OrderContext } from '../OrderContext';
 import { useNavigate } from 'react-router-dom';
 import axios from 'axios';
 import './baristaHome.css';
 import './login';
 import './baristaRecipe';
+import { API_BASE_URL } from '../config';
 
 const BaristaHome = () => {
 
@@ -23,6 +24,28 @@ const BaristaHome = () => {
     const [orderItems, setOrderItems] = useState([
         { quantity: '', name: '' },
     ]);
+
+    // Menu prices, keyed by lowercased drink name.
+    //
+    // This is for DISPLAY ONLY - so the barista can tell the customer what they
+    // owe. The server still prices the sale from its own Menu table when the
+    // order is submitted, and its number is the one that gets charged. If the
+    // two ever disagree, the server is right and this is stale.
+    const [menuPrices, setMenuPrices] = useState({});
+
+    // Fetched once when the page loads rather than per drink per order.
+    useEffect(() => {
+        axios.get(`${API_BASE_URL}menu/`)
+            .then(response => {
+                const prices = {};
+                for (const drink of response.data) {
+                    // DRF serializes DecimalField as a string, so parse it.
+                    prices[drink.name.toLowerCase()] = parseFloat(drink.price);
+                }
+                setMenuPrices(prices);
+            })
+            .catch(error => console.error('Failed to load menu prices:', error));
+    }, []);
 
     // Get input from text fields for order information
     const handleInputChange = (index, field, value) => {
@@ -53,18 +76,16 @@ const BaristaHome = () => {
       
         // Used to store all recipes and their steps
         const allRecipes = [];
-        
-        let total = 0;
-        
-        // For each item the customer ordered:
-        // Calculate the total sale
-        // Get the steps for each recipe
+
+        // For each item the customer ordered, get the steps for each recipe.
+        // Pricing is not done here - the server computes the total from
+        // Menu.price so a client cannot name its own amount.
         for (const item of orderItems) {
             const name = item.name;
             const quantity = item.quantity;
     
             try {
-                const response = await axios.get(`http://localhost:8000/api/recipes/?recipe_name=${encodeURIComponent(name)}`);
+                const response = await axios.get(`${API_BASE_URL}recipes/?recipe_name=${encodeURIComponent(name)}`);
                 const recipeData = response.data;
     
                 if (recipeData.length === 0) {
@@ -82,14 +103,6 @@ const BaristaHome = () => {
                     }));
                     allRecipes.push(...indexedRecipeData);
                 }
-
-                // Get price of current drink
-                const recipeResponse = await axios.get(`http://localhost:8000/api/menu/?name=${encodeURIComponent(name)}`);
-                const drink = recipeResponse.data[0];
-
-                // Save the cost of the drink to our total sale
-                const unitPrice = parseFloat(drink.price);
-                total += unitPrice * quantity;
             } catch (error) {
                 console.error(`Error fetching recipe for ${name}:`, error);
                 alert(`Failed to fetch recipe for ${name}`);
@@ -103,11 +116,9 @@ const BaristaHome = () => {
         }
 
 
-        // Record sales in the backend
+        // Record sales in the backend. The server timestamps the sale and
+        // prices it from the menu, so neither is sent from here.
         const salePayload = {
-            time: now.toLocaleTimeString(undefined, { hour: '2-digit', minute: '2-digit' }),
-            day: new Date().toISOString().split('T')[0],
-            total, // Include the total here instead of sending per-item info
             payment_method: paymentMethod.toLowerCase(),
             items: orderItems.map(item => ({
                 drink_name: item.name,
@@ -118,7 +129,7 @@ const BaristaHome = () => {
         console.log("Sale payload:", salePayload);
     
         try {
-            const saleMade = await axios.post("http://localhost:8000/api/sales/record-sale", salePayload);
+            const saleMade = await axios.post(`${API_BASE_URL}sales/record-sale`, salePayload);
             console.log("SALE MADE:", saleMade);
         } catch (error) {
             console.error(`Failed to record sale:`, error);
@@ -132,6 +143,25 @@ const BaristaHome = () => {
     };
 
     const [paymentMethod, setPaymentMethod] = useState('');
+
+    // Running total, recomputed on every render from the current order.
+    // A name that isn't on the menu is flagged rather than silently counted as
+    // free - a typo should not quietly undercharge the customer.
+    let orderTotal = 0;
+    let hasUnknownItem = false;
+
+    for (const item of orderItems) {
+        const name = item.name.trim().toLowerCase();
+        if (name === '') continue;
+
+        const unitPrice = menuPrices[name];
+        if (unitPrice === undefined) {
+            hasUnknownItem = true;
+            continue;
+        }
+
+        orderTotal += unitPrice * (parseInt(item.quantity, 10) || 0);
+    }
 
     // Used to set date and time
     const now = new Date();
@@ -200,6 +230,11 @@ const BaristaHome = () => {
                 { /* pay button and payment method field */ }
                 <div className="order-row" id="bottomRow">
                 <button className="labels" id="payButton" onClick={handlePay}>PAY</button>
+                    <span className="labels" id="orderTotal">
+                        {hasUnknownItem
+                            ? 'ITEM NOT ON MENU'
+                            : `TOTAL $${orderTotal.toFixed(2)}`}
+                    </span>
                     <input
                         type="text"
                         className="paymentField"

@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import axios from 'axios';
 import BackButton from '../components/backbutton';
 import './accountingreport.css';
+import { API_BASE_URL } from '../config';
 
 export default function AccountingReport() {
     const [data, setData] = useState([]);
@@ -10,7 +11,7 @@ export default function AccountingReport() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const response = await axios.get('http://localhost:8000/api/accounting/'); 
+                const response = await axios.get(`${API_BASE_URL}accounting/`); 
                 const transformedData = response.data.map((entry) => ({
                     ...entry,
                     timestamp: `${entry.day} ${entry.time}`,
@@ -48,7 +49,7 @@ export default function AccountingReport() {
                                 data.map((entry, index) => (
                                     <tr key={index}>
                                         <td>{entry.timestamp}</td>
-                                        <td>{entry.account_balance}</td>
+                                        <td>${Number(entry.account_balance).toFixed(2)}</td>
                                     </tr>
                                 ))
                             ) : (
