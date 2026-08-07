@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import BackButton from '../components/backbutton';
 import './editemployees.css';
+import api, { readApiError } from '../api';
 import { API_BASE_URL } from '../config';
 
 export default function EditEmployee() {
@@ -12,17 +13,10 @@ export default function EditEmployee() {
 
     const handleDelete = async () => {
         try {
-            const response = await fetch(`${API_BASE_URL}employees/delete/?ssn=${encodeURIComponent(ssn)}`, {
-                method: 'DELETE',
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to delete employee');
-            }
-
+            await api.delete(`${API_BASE_URL}employees/delete/?ssn=${encodeURIComponent(ssn)}`);
             alert('Employee deleted successfully');
         } catch (error) {
-            alert(`Error: ${error.message}`);
+            alert(readApiError(error, 'Failed to delete employee.'));
         }
     };
 
@@ -35,21 +29,13 @@ export default function EditEmployee() {
         }
 
         try {
-            const response = await fetch(`${API_BASE_URL}employees/update-salary/?ssn=${encodeURIComponent(ssn)}`, {
-                method: 'PUT',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({ salary }),
-            });
-
-            if (!response.ok) {
-                throw new Error('Failed to update salary');
-            }
-
+            await api.put(
+                `${API_BASE_URL}employees/update-salary/?ssn=${encodeURIComponent(ssn)}`,
+                { salary }
+            );
             alert('Salary updated successfully');
         } catch (error) {
-            alert(`Error: ${error.message}`);
+            alert(readApiError(error, 'Failed to update salary.'));
         }
     };
 

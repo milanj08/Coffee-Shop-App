@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api';
 import './managerHome';
 import './inventory.css';
 import { API_BASE_URL } from '../config';
@@ -75,11 +75,11 @@ const Inventory = () => {
     
         try {
             // Sends a message to the backend and prints the reponse to console
-            const response = await axios.patch(`${API_BASE_URL}inventory/update/`, { order: orderItems }, {headers: {'Content-Type': 'application/json'}});
+            const response = await api.patch(`${API_BASE_URL}inventory/update/`, { order: orderItems }, {headers: {'Content-Type': 'application/json'}});
             console.log(response.data);
 
             // Used to update our accounting balance based on how much we purchased
-            const accountBalanceResponse = await axios.post(`${API_BASE_URL}accounting/purchase/`, { total_purchase: total }, {headers: {'Content-Type': 'application/json'}});
+            const accountBalanceResponse = await api.post(`${API_BASE_URL}accounting/purchase/`, { total_purchase: total }, {headers: {'Content-Type': 'application/json'}});
             console.log(accountBalanceResponse.data);
 
             // Refresh our inventory and balance to reflect our purchase
@@ -97,7 +97,7 @@ const Inventory = () => {
     // Receive all inventory found in database
     const fetchInventory = async () => {
         try {
-            const response = await axios.get(`${API_BASE_URL}inventory/`);
+            const response = await api.get(`${API_BASE_URL}inventory/`);
             setInventoryItems(response.data);
             setQuantities(Array(response.data.length).fill(0));
         } catch (error) {
@@ -107,7 +107,7 @@ const Inventory = () => {
 
     const fetchAccountBalance = async () => {
         try {
-            const response = await axios.get(`${API_BASE_URL}accounting/check/`);
+            const response = await api.get(`${API_BASE_URL}accounting/check/`);
             setAccountBalance(response.data.account_balance);
         } catch (error) {
             console.error("Failed to fetch account balance:", error);

@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import Box from '../components/Box.js';
 import BackButton from '../components/backbutton.js';
 import './employee.css';
+import api, { readApiError } from '../api';
 import { API_BASE_URL } from '../config';
 
 export default function Employees() {
@@ -18,19 +19,18 @@ export default function Employees() {
     useEffect(() => {
         const fetchEmployees = async () => {
             try {
-                const response = await fetch(`${API_BASE_URL}baristas/`);
-                if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
-                }
-                const data = await response.json();
-                const parsedEmployees = data.map(barista => ({
+                // Was fetch(). axios throws on a non-2xx response, so the
+                // explicit response.ok check is no longer needed - and the
+                // auth token is attached by the interceptor in api.js.
+                const response = await api.get(`${API_BASE_URL}baristas/`);
+                const parsedEmployees = response.data.map(barista => ({
                     name: `${barista.ssn.first_name} ${barista.ssn.last_name}`,
                     ssn: barista.ssn.ssn
                 }));
                 setEmployees(parsedEmployees);
             } catch (err) {
                 console.error(err);
-                setError("Failed to load employees.");
+                setError(readApiError(err, 'Failed to load employees.'));
             } finally {
                 setLoading(false);
             }

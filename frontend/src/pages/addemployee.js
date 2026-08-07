@@ -1,6 +1,10 @@
 import React, { useState } from 'react'
 import BackButton from '../components/backbutton'
+import api, { readApiError } from '../api';
 import { API_BASE_URL } from '../config';
+// Was missing. CRA only bundles a stylesheet if a module imports it, so none
+// of this page's styles were being applied.
+import './addemployee.css';
 
 export default function AddEmployee() {
     const [first_name, setFirstName] = useState('')
@@ -11,32 +15,27 @@ export default function AddEmployee() {
 
     const handleSubmit = async () => {
         try {
-            const response = await fetch(`${API_BASE_URL}baristas/`, {
-                method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
+            // Was fetch(). axios serializes the body, sets the JSON content
+            // type, throws on non-2xx, and the api instance adds the auth
+            // token - so all of that boilerplate is gone.
+            await api.post(`${API_BASE_URL}baristas/`, {
+                ssn: {
+                    ssn: parseInt(ssn),
+                    first_name,
+                    last_name,
+                    email,
+                    salary: parseFloat(salary),
                 },
-                body: JSON.stringify({
-                    ssn: {
-                        ssn: parseInt(ssn),
-                        first_name,
-                        last_name,
-                        email,
-                        salary: parseFloat(salary),
-                    },
-                    day: '2025-05-01', 
-                    start_time: '08:00:00', 
-                    end_time: '16:00:00', 
-                }),
+                day: '2025-05-01',
+                start_time: '08:00:00',
+                end_time: '16:00:00',
             })
-
-            if (!response.ok) {
-                throw new Error('Failed to add employee')
-            }
 
             alert('Employee added successfully')
         } catch (error) {
-            alert(`Error: ${error.message}`)
+            // readApiError surfaces what the server actually said - a salary
+            // validation message, or "This action is restricted to managers."
+            alert(readApiError(error, 'Failed to add employee.'))
         }
     }
 

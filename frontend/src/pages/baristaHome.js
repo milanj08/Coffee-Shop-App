@@ -2,7 +2,8 @@
 import React, { useContext, useEffect, useState } from "react";
 import { OrderContext } from '../OrderContext';
 import { useNavigate } from 'react-router-dom';
-import axios from 'axios';
+import api from '../api';
+import { clearSession } from '../auth';
 import './baristaHome.css';
 import './login';
 import './baristaRecipe';
@@ -15,9 +16,21 @@ const BaristaHome = () => {
 
     const navigate = useNavigate();
 
-    // Log out button
-    const handleLogOut = () => {
-        navigate("/login")
+    // Log out button.
+    //
+    // Deletes the token server-side before clearing it locally. DRF tokens
+    // never expire on their own, so clearing localStorage alone would leave a
+    // key that still works for anyone who copied it.
+    const handleLogOut = async () => {
+        try {
+            await api.post(`${API_BASE_URL}auth/logout/`);
+        } catch (error) {
+            // Already invalid, or the server is down. Sign out locally either
+            // way - refusing to log someone out is worse than a stale token.
+            console.error('Logout request failed:', error);
+        }
+        clearSession();
+        navigate('/');
     };
 
     // Tracks barista input
@@ -35,7 +48,7 @@ const BaristaHome = () => {
 
     // Fetched once when the page loads rather than per drink per order.
     useEffect(() => {
-        axios.get(`${API_BASE_URL}menu/`)
+        api.get(`${API_BASE_URL}menu/`)
             .then(response => {
                 const prices = {};
                 for (const drink of response.data) {
@@ -85,7 +98,7 @@ const BaristaHome = () => {
             const quantity = item.quantity;
     
             try {
-                const response = await axios.get(`${API_BASE_URL}recipes/?recipe_name=${encodeURIComponent(name)}`);
+                const response = await api.get(`${API_BASE_URL}recipes/?recipe_name=${encodeURIComponent(name)}`);
                 const recipeData = response.data;
     
                 if (recipeData.length === 0) {
@@ -129,7 +142,7 @@ const BaristaHome = () => {
         console.log("Sale payload:", salePayload);
     
         try {
-            const saleMade = await axios.post(`${API_BASE_URL}sales/record-sale`, salePayload);
+            const saleMade = await api.post(`${API_BASE_URL}sales/record-sale`, salePayload);
             console.log("SALE MADE:", saleMade);
         } catch (error) {
             console.error(`Failed to record sale:`, error);

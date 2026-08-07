@@ -1,6 +1,9 @@
 //Manger Home Page after login
 import React from "react";
 import { useNavigate } from 'react-router-dom';
+import api from '../api';
+import { clearSession } from '../auth';
+import { API_BASE_URL } from '../config';
 import './managerHome.css';
 import './inventory';
 import './employees';
@@ -22,8 +25,16 @@ const ManagerHome = () => {
         navigate("/reports");
     };
 
-    const handleLogOut = () => {
-        navigate("/login")
+    // Deletes the token server-side, then clears it locally. See the note in
+    // baristaHome - DRF tokens do not expire on their own.
+    const handleLogOut = async () => {
+        try {
+            await api.post(`${API_BASE_URL}auth/logout/`);
+        } catch (error) {
+            console.error('Logout request failed:', error);
+        }
+        clearSession();
+        navigate('/');
     };
     
     return (

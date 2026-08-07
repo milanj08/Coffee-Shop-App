@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import axios from 'axios';
+import api, { readApiError } from '../api';
 import BackButton from '../components/backbutton';
 import './accountingreport.css';
 import { API_BASE_URL } from '../config';
@@ -11,22 +11,30 @@ export default function AccountingReport() {
     useEffect(() => {
         const fetchData = async () => {
             try {
-                const response = await axios.get(`${API_BASE_URL}accounting/`); 
+                const response = await api.get(`${API_BASE_URL}accounting/`); 
                 const transformedData = response.data.map((entry) => ({
                     ...entry,
                     timestamp: `${entry.day} ${entry.time}`,
                 }));
                 setData(transformedData);
             } catch (err) {
-                setError('Error fetching data');
+                // readApiError surfaces the server's own message - a 403 now
+                // reads "This action is restricted to managers." instead of a
+                // generic failure that could mean anything.
+                setError(readApiError(err, 'Error fetching data'));
             }
         };
 
         fetchData();
     }, []);
 
-    if (error) return <div>{error}</div>;
-
+    // There used to be an early `if (error) return <div>{error}</div>` here.
+    // It rendered the message INSTEAD of the page - including instead of the
+    // back button - so any failure left you on a dead screen with no way out
+    // except the browser's back button.
+    //
+    // An error state is still a state of this page, not a replacement for it.
+    // Chrome and layout stay; only the content area changes.
     return (
         <>
             <div className="report-page-container">
@@ -37,7 +45,9 @@ export default function AccountingReport() {
                 <div className="report-content">
                     <h1 className="header">Accounting Report</h1>
 
-                    <table className="accounting-table">
+                    {error && <p className="report-error">{error}</p>}
+
+                    {!error && <table className="accounting-table">
                         <thead>
                             <tr>
                                 <th>Timestamp</th>
@@ -58,7 +68,7 @@ export default function AccountingReport() {
                                 </tr>
                             )}
                         </tbody>
-                    </table>
+                    </table>}
                 </div>
             </div>
         </>
