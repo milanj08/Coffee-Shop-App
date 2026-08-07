@@ -107,13 +107,50 @@
   }
 },
 {
+  "model": "auth.user",
+  "pk": 1,
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$Hn1jyIZTrN7a1GoBVBq82b$GQ79bwlT0vtf0HlVCUAplXdtzl9Y85boQxJR4lWsqx8=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "manager",
+    "first_name": "Michael",
+    "last_name": "James",
+    "email": "mjames@example.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-08-06T09:00:00Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
+  "model": "auth.user",
+  "pk": 2,
+  "fields": {
+    "password": "pbkdf2_sha256$1000000$sm43bdnzggawGfHyAH3zy4$xZJ6T6ro6Azamaw0+/R02XjEwJAVKU2j1Oqlvvbxets=",
+    "last_login": null,
+    "is_superuser": false,
+    "username": "barista",
+    "first_name": "Alice",
+    "last_name": "Smith",
+    "email": "alice@example.com",
+    "is_staff": false,
+    "is_active": true,
+    "date_joined": "2026-08-06T09:00:00Z",
+    "groups": [],
+    "user_permissions": []
+  }
+},
+{
   "model": "cafe.employee",
   "pk": "121212121",
   "fields": {
     "first_name": "Michael",
     "last_name": "James",
     "email": "mjames@example.com",
-    "salary": "9500.00"
+    "salary": "9500.00",
+    "user": 1
   }
 },
 {
@@ -123,7 +160,8 @@
     "first_name": "Alice",
     "last_name": "Smith",
     "email": "alice@example.com",
-    "salary": "50000.00"
+    "salary": "50000.00",
+    "user": 2
   }
 },
 {

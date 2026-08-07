@@ -60,6 +60,31 @@ python manage.py runserver
 Runs on `http://localhost:8000`. `loaddata demo` seeds a menu, ingredients,
 recipes, employees, and a starting account balance so the screens aren't empty.
 
+### Signing in
+
+The fixture creates two accounts:
+
+| Username | Password | Role |
+|---|---|---|
+| `manager` | `CoffeeShop2026` | Manager — inventory, employees, accounting |
+| `barista` | `CoffeeShop2026` | Barista — taking orders |
+
+You can also register your own account from the login screen. **Self-signup
+always creates a barista** — the registration serializer has no `role` field,
+so a request asking for one is ignored. Manager accounts are created by a
+manager.
+
+Role is derived server-side from the `Barista` and `Manager` tables on every
+request. The frontend stores a role in `localStorage` and uses it to decide
+which screens to offer, but editing that value only changes the menu you see:
+the API re-derives the role and returns 403. See `cafe/permissions.py`.
+
+> Authentication uses DRF token auth, with the token in `localStorage`. That
+> means any script on the page can read it, so an XSS bug would leak it. An
+> `httpOnly` cookie is stronger, at the cost of session auth plus
+> CORS-with-credentials and CSRF handling across two origins — a trade-off
+> taken deliberately, not overlooked.
+
 > **On the database.** This runs on SQLite so it can be cloned and started without
 > installing a database server. PostgreSQL was the original course requirement and
 > `psycopg2` was pinned in the requirements file, but `settings.py` has configured
