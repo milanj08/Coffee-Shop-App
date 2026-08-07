@@ -26,7 +26,9 @@ class Manager(models.Model):
 class InventoryManagement(models.Model):
     name = models.CharField(max_length=255, primary_key=True)
     unit = models.CharField(max_length=50)
-    quantity = models.PositiveIntegerField()
+    # Decimal, not integer: a recipe can call for 0.5 of a unit, and an integer
+    # column silently rounds it away. SQLite tolerated this; MySQL will not.
+    quantity = models.DecimalField(max_digits=12, decimal_places=2)
     price = models.DecimalField(max_digits=10, decimal_places=2)
 
 # --- Menu ---
@@ -62,12 +64,17 @@ class Sale(models.Model):
 
     time = models.TimeField()
     day = models.DateField()
-    quantity = models.DecimalField(max_digits=10, decimal_places=2)
+    # You cannot sell 2.5 lattes.
+    quantity = models.PositiveIntegerField()
     drink = models.ForeignKey(Menu, on_delete=models.CASCADE)
     payment_method = models.CharField(max_length=20, choices=PaymentMethod.choices)
+    # Snapshot of Menu.price at the moment of sale. Without this, a manager
+    # editing the menu silently reprices every historical sale of that drink.
+    price_charged = models.DecimalField(max_digits=10, decimal_places=2)
 
-    class Meta:
-        unique_together = (('time', 'day'),)
+    # NOTE: previously `unique_together = (('time', 'day'),)`, which allowed one
+    # sale per second shop-wide. A two-item order writes two rows with the same
+    # timestamp, so this constraint made the endpoint impossible to fix.
 
 # --- Accounting ---
 class Accounting(models.Model):
@@ -83,7 +90,9 @@ class Recipe(models.Model):
     recipe_name = models.ForeignKey(Menu, on_delete=models.CASCADE)
     ingredient_name = models.ForeignKey(InventoryManagement, on_delete=models.CASCADE)
     ingredient_quantity = models.DecimalField(max_digits=20, decimal_places=2)
-    ingredient_unit = models.CharField(max_length=5)
+    # Must equal the unit its ingredient is stocked in - enforced in
+    # RecipeSerializer.validate(). max_length was 5, so "liters" never fit.
+    ingredient_unit = models.CharField(max_length=50)
     position_number = models.PositiveSmallIntegerField()
     execution_description = models.TextField()
 
