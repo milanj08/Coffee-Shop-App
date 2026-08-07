@@ -1,0 +1,42 @@
+name: tests
+
+# Runs the Django test suite on every push and every pull request, so a broken
+# commit is visible on GitHub rather than discovered by whoever clones it next.
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+
+    # The backend lives in a subdirectory, so every step runs from there
+    # instead of repeating `cd backend`.
+    defaults:
+      run:
+        working-directory: backend
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.13'
+          # Caches installed packages between runs, keyed on the requirements
+          # file, so an unchanged dependency list doesn't reinstall every time.
+          cache: pip
+          cache-dependency-path: backend/requirements_backend.txt
+
+      - name: Install dependencies
+        run: pip install -r requirements_backend.txt
+
+      - name: Check for missing migrations
+        # Fails if models.py has changes nobody generated a migration for -
+        # the mistake where tests pass locally because your database already
+        # has the column, and a fresh clone breaks.
+        run: python manage.py makemigrations --check --dry-run
+
+      - name: Run tests
+        run: python manage.py test cafe

@@ -1,15 +1,11 @@
 # Coffee Shop Ordering & Inventory System
 
+[![tests](https://github.com/milanj08/Coffee-Shop-App/actions/workflows/tests.yml/badge.svg)](https://github.com/milanj08/Coffee-Shop-App/actions/workflows/tests.yml)
+
 A full-stack cafe management application with separate interfaces for baristas and
 managers. Baristas take and prepare orders; managers handle inventory, staffing,
 and accounting. Built for CS 480 (Database Systems) at the University of Illinois
 Chicago, Spring 2025.
-
-<!-- Add a screenshot here — the single biggest improvement you can make to this file.
-     Save images to docs/ and reference them:
-![Manager dashboard](docs/manager-dashboard.png)
-![Inventory management](docs/inventory.png)
--->
 
 ## Stack
 
