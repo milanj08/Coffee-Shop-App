@@ -3,7 +3,17 @@
     padding: 40px 20px 20px 20px;
 }
 
-.back-button-container {
+/* Scoped to .employees-page.
+ *
+ * This used to be a bare `.back-button-container { position: absolute; ... }`.
+ * Create React App bundles every imported stylesheet into one global sheet, so
+ * that rule applied on EVERY page - including Add Employee, where it pulled the
+ * back button out of the flow and dropped it on top of the First Name field.
+ *
+ * A page-specific rule belongs behind a page-specific selector. This is the
+ * usual failure mode of plain CSS in a component app; CSS Modules or a
+ * styled-components setup scope it for you. */
+.employees-page .back-button-container {
     position: absolute;
     top: 20px;
     left: 20px;
@@ -25,8 +35,11 @@
 
 .boxes-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
-    gap: 100px;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    /* Was 100px, on top of a 10vh margin on every card. The two combined put
+       roughly a screen's width between cards. */
+    gap: 24px;
     max-width: 1000px;
-    margin: 0;
+    margin: 0 auto;
+    padding: 0 20px;
 }

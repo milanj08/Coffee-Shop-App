@@ -38,3 +38,18 @@
 .accounting-table th {
     background-color: #f0f0f0;
 }
+
+/* Shown in place of the table when the request fails - a 403 for a barista,
+   or a network error. The page chrome stays visible so the back button is
+   always reachable. */
+.report-error {
+    max-width: 600px;
+    margin: 20px auto;
+    padding: 16px;
+    border: 1px solid #c66;
+    border-radius: 6px;
+    background-color: #fdf0f0;
+    color: #a33;
+    text-align: center;
+    white-space: pre-line;
+}
