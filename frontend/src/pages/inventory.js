@@ -71,16 +71,12 @@ const Inventory = () => {
             quantity: item.quantity
         }));
     
-        console.log("Sending order:", orderItems);
-    
         try {
-            // Sends a message to the backend and prints the reponse to console
-            const response = await api.patch(`${API_BASE_URL}inventory/update/`, { order: orderItems }, {headers: {'Content-Type': 'application/json'}});
-            console.log(response.data);
+            // Add the purchased quantities to stock
+            await api.patch(`${API_BASE_URL}inventory/update/`, { order: orderItems });
 
-            // Used to update our accounting balance based on how much we purchased
-            const accountBalanceResponse = await api.post(`${API_BASE_URL}accounting/purchase/`, { total_purchase: total }, {headers: {'Content-Type': 'application/json'}});
-            console.log(accountBalanceResponse.data);
+            // Then deduct what it cost from the account balance
+            await api.post(`${API_BASE_URL}accounting/purchase/`, { total_purchase: total });
 
             // Refresh our inventory and balance to reflect our purchase
             await fetchInventory(); 

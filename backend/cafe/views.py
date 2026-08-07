@@ -77,9 +77,6 @@ class UpdateInventoryAPIView(APIView):
     permission_classes = [IsManager]
 
     def patch(self, request):
-        # Checking if our data was sent properly
-        print("Received data:", request.data)
-
         try:
             # Get list of items from request
             order_items = request.data.get("order", [])

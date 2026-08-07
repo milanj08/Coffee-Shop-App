@@ -139,18 +139,14 @@ const BaristaHome = () => {
             })),
         };
 
-        console.log("Sale payload:", salePayload);
-    
         try {
-            const saleMade = await api.post(`${API_BASE_URL}sales/record-sale`, salePayload);
-            console.log("SALE MADE:", saleMade);
+            await api.post(`${API_BASE_URL}sales/record-sale`, salePayload);
         } catch (error) {
             console.error(`Failed to record sale:`, error);
             alert('Failed to record sale');
             return;
         }
             
-        console.log("All Recipes:", allRecipes);
         setRecipes(allRecipes);
         navigate('/baristaRecipe');
     };
