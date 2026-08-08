@@ -13,18 +13,28 @@ Chicago, Spring 2025.
 | --- | --- |
 | Backend | Django 5.2, Django REST Framework 3.16 |
 | Frontend | React, React Router, axios |
-| Database | PostgreSQL (`psycopg2`) |
+| Database | SQLite |
+| Auth | DRF token authentication, role permissions derived from the schema |
+| CI | GitHub Actions — 42 tests on every push |
 
 ## Features
 
-**Barista interface** — take orders, view recipes with step-by-step preparation,
-track completed orders
+**Authentication** — token-based sign-in, with barista and manager roles derived
+from the database and enforced on every endpoint. A barista can read the menu
+and record sales; only a manager can change prices, recipes, stock, employee
+records, or the accounts.
+
+**Barista interface** — take orders with a running total, view recipes with
+step-by-step preparation, track completed orders
 
 **Manager interface** — inventory management with purchasing, employee records
 (add, edit salary, remove), accounting reports with running balance
 
-**Behind the scenes** — recording a sale validates the order against the menu,
-decrements ingredient stock, and updates the account balance in one flow
+**Behind the scenes** — recording a sale reads the ingredient amounts each drink
+needs from the `Recipe` table, prices the order from the menu server-side, and
+deducts stock inside a transaction with row locking. If any ingredient is short
+the whole order is refused with a 409 and nothing is written. Adding a new drink
+requires no code changes.
 
 ## Data model
 
@@ -38,6 +48,12 @@ Nine tables, designed collaboratively by the team:
 Constraints are enforced at the model level: unique-together on natural keys,
 validated choice fields for payment method and drink type, and `Decimal` columns
 for all monetary values. The relational model diagram is in `Relational-Model.pdf`.
+
+Two notes on the design, both inherited from the assignment's ER model. `Employee`
+uses SSN as its primary key, so it is copied into every child table and appears in
+URLs; a surrogate key with SSN as an encrypted non-key column would be correct.
+And `Promotion` exists in the schema but no code path reads it — the promotional
+pricing flow was never built.
 
 ## Running locally
 
@@ -105,8 +121,16 @@ Runs on `http://localhost:3000` and expects the backend on port 8000.
 
 All endpoints are under `/api/`.
 
+All of them require an `Authorization: Token <key>` header except register and
+login. Employee records, accounting, and every write to the menu, recipes, or
+inventory are manager-only.
+
 | Method | Endpoint | Purpose |
 | --- | --- | --- |
+| POST | `/auth/register/` | Create an account — always a barista |
+| POST | `/auth/login/` | Exchange credentials for a token |
+| POST | `/auth/logout/` | Delete the caller's token |
+| GET | `/auth/me/` | Current account and role |
 | GET, POST | `/baristas/`, `/managers/` | Staff records; supports `?first_name=` filtering |
 | GET, POST | `/inventory/` | Ingredient stock |
 | PATCH | `/inventory/update/` | Add purchased stock |
@@ -116,46 +140,35 @@ All endpoints are under `/api/`.
 | GET, POST | `/sales/` | Sale records |
 | POST | `/sales/record-sale` | Record a sale, decrement stock, update balance |
 | GET, POST | `/accounting/` | Balance history |
-| GET, POST | `/accounting/check/` | Current balance / record a purchase |
-| DELETE | `/employees/delete/?ssn=` | Remove an employee |
-| PUT | `/employees/update-salary/?ssn=` | Update salary |
+| GET, POST | `/accounting/balance/` | Current balance (GET) / record a purchase (POST) |
+| DELETE | `/employees/delete/?ssn=` | Remove an employee and their login |
+| PATCH | `/employees/update-salary/?ssn=` | Update salary |
 
 ## Team
 
 Three-person project — Milan Joksimovic, Osman Khan, Jonathan Hung.
 The schema was designed collaboratively; implementation was split across the stack.
 
-**My contributions (13 of 40 commits):**
+**My contributions (28 of 55 commits):**
 
-- Lead author of the REST API layer — endpoints and routing across inventory,
-  sales, menu, recipes, promotions, accounting, and employee management
-- The sale-recording flow: order validation, ingredient stock decrement, and
-  running account balance
-- Barista and manager dashboards, and the inventory management interface in React
+- The three business-logic endpoints — recording a sale, restocking inventory,
+  and the account balance
+- Barista order entry, recipe display, and the inventory management interface
+  in React
 - Shared order state across barista pages using React Context
 
-## What I would do differently
+Jonathan implemented the models and serializers; Osman built the employee
+management screens and the accounting report.
 
-Revisiting this a year later, these are the changes I would make:
+### Revisited solo, August 2026
 
-**Use the Recipe table in the sale flow.** `RecordSaleAPIView` hardcodes ingredient
-quantities for two drinks, even though the `Recipe` table already stores exactly
-that data. Adding a third drink today means changing code. It should query recipes
-and decrement generically.
+Everything below was done alone, eight months after the course ended:
 
-**Wrap the sale in a transaction.** Recording a sale writes to three tables in
-sequence, so a failure partway through can decrement inventory without recording
-the sale. `@transaction.atomic` plus `select_for_update()` on the inventory rows
-would also close a race condition on concurrent sales.
+- Sale processing rewritten to read ingredient amounts from the `Recipe` table
+  rather than hardcoded per-drink branches
+- Order pricing moved server-side; stock deduction wrapped in a transaction with
+  row locking, returning 409 when an order cannot be fulfilled
+- Token authentication with role permissions derived from the `Barista` and
+  `Manager` tables, replacing a browser-side login
+- 42 tests, a seed fixture, and GitHub Actions running the suite on every push
 
-**Move authentication server-side.** Login is currently handled in the browser
-against `localStorage`, with roles inferred from the username string. It should use
-Django's auth system with hashed passwords, session handling, and permission classes
-on the API — which is entirely open right now.
-
-**Reconsider SSN as a primary key.** It came from the assignment's ER diagram, but a
-numeric column strips leading zeros, and sensitive identifiers shouldn't be keys. A
-surrogate key would be correct.
-
-**Configure the API URL once.** The frontend hardcodes `http://localhost:8000` in
-every request, so the app can't be deployed without editing each file.
