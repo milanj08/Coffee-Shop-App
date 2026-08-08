@@ -13,10 +13,11 @@ from .serializers import (
     BaristaSerializer, ManagerSerializer, InventoryManagementSerializer,
     MenuSerializer, PromotionSerializer, SaleSerializer,
     AccountingSerializer, RecipeSerializer, EmployeeSerializer,
-    RecordSaleSerializer
+    RecordSaleSerializer, RestockSerializer, EmployeeLookupSerializer
 )
 from .services import (
-    record_sale, MenuItemNotFound, IngredientNotStocked, InsufficientStock
+    record_sale, restock, delete_employee,
+    MenuItemNotFound, IngredientNotStocked, InsufficientStock, EmployeeNotFound
 )
 from .permissions import IsManager, IsManagerOrReadOnly, IsStaff
 
@@ -73,23 +74,30 @@ class InventoryListCreateAPIView(generics.ListCreateAPIView):
 
 # Handles updating quantity of an item in our inventory
 class UpdateInventoryAPIView(APIView):
+    """PATCH /api/inventory/update/ - add purchased stock.
+
+    Was: read request.data straight, loop, save each row, and wrap the lot in
+    `except Exception` returning a 200. That meant an unvalidated payload, a
+    KeyError on a missing field, partial writes on failure, and - because
+    Response defaults to status 200 - a failed restock that looked identical to
+    a successful one.
+    """
+
     # Restocking moves money and stock. Managers only.
     permission_classes = [IsManager]
 
     def patch(self, request):
+        serializer = RestockSerializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+
         try:
-            # Get list of items from request
-            order_items = request.data.get("order", [])
+            restock(serializer.validated_data['order'])
+        except IngredientNotStocked as error:
+            # Naming an item that isn't stocked is the caller's mistake, and
+            # 404 says which kind: the resource doesn't exist.
+            return Response({'error': str(error)}, status=status.HTTP_404_NOT_FOUND)
 
-            # For each item in orders, add how much product we ordered to our exisitng quantity
-            for item in order_items:
-                inventory_item = InventoryManagement.objects.get(name=item['name'])
-                inventory_item.quantity += item['quantity']
-                inventory_item.save()
-
-            return Response({"message": "Inventory updated successfully"})
-        except Exception as e:
-            return Response({"error": str(e)})
+        return Response({'message': 'Inventory updated successfully'})
 
 
 class MenuListCreateAPIView(generics.ListCreateAPIView):
@@ -256,66 +264,65 @@ class RecipeListCreateAPIView(generics.ListCreateAPIView):
         return queryset
 
 class EmployeeDeleteAPIView(APIView):
-    """
-    Delete an employee (Barista or Manager) using their SSN via query param.
-    Example: DELETE /api/employees/delete/?ssn=123-45-6789
+    """DELETE /api/employees/delete/?ssn=123456789
+
+    Was: delete the Barista row, or failing that the Manager row, and return
+    200 for everything including "not found". Two problems.
+
+    Every response was 200 - a missing employee and a successful delete were
+    indistinguishable without reading the body.
+
+    And it left an orphan. on_delete=CASCADE runs Employee -> Barista, not the
+    reverse, so removing the Barista row left the Employee behind. Once logins
+    existed it left the User and its token too, which meant a "deleted"
+    employee could still authenticate. Deleting the Employee is what actually
+    removes the person; the cascade handles their role row.
     """
 
     permission_classes = [IsManager]
 
     def delete(self, request):
-        ssn = request.query_params.get('ssn', None)
-        if not ssn:
-            return Response({'error': 'SSN parameter is required'})
+        serializer = EmployeeLookupSerializer(data=request.query_params)
+        serializer.is_valid(raise_exception=True)
+
         try:
-            # Try deleting Barista
-            employee = Barista.objects.filter(ssn=ssn).first()
-            if employee:
-                employee.delete()
-                return Response({'message': 'Barista deleted successfully'})
+            delete_employee(serializer.validated_data['ssn'])
+        except EmployeeNotFound as error:
+            return Response({'error': str(error)}, status=status.HTTP_404_NOT_FOUND)
 
-            # Try deleting Manager
-            employee = Manager.objects.filter(ssn=ssn).first()
-            if employee:
-                employee.delete()
-                return Response({'message': 'Manager deleted successfully'})
-
-            return Response({'error': 'Employee not found'})
-
-        except Exception as e:
-            return Response({'error': str(e)})
+        # 204: succeeded, and there is nothing to return. The old 200 with a
+        # message body was describing an outcome the status code already gives.
+        return Response(status=status.HTTP_204_NO_CONTENT)
         
 class UpdateSalaryAPIView(APIView):
-    """
-    Update the salary of an Employee (Barista or Manager) using their SSN via query param.
-    Example: PUT /api/employees/update-salary/?ssn=123-45-6789
+    """PATCH /api/employees/update-salary/?ssn=123456789
+
+    PATCH, not PUT. PUT means "replace the whole resource" - a PUT that only
+    sends one field and relies on partial=True is a PATCH wearing the wrong
+    verb, and it means a client sending a full object would silently do a
+    partial update instead.
+
+    Also removed a dead line: `employee.salary = new_salary` was assigned and
+    then immediately overwritten by the serializer on the next statement.
     """
 
     permission_classes = [IsManager]
 
-    def put(self, request):
-        ssn = request.query_params.get('ssn')
-        new_salary = request.data.get('salary')
+    def patch(self, request):
+        lookup = EmployeeLookupSerializer(data=request.query_params)
+        lookup.is_valid(raise_exception=True)
 
-        if not ssn or new_salary is None:
-            return Response({'error': 'SSN and salary are required'}, status=400)
-
-        try:
-            new_salary = Decimal(new_salary)
-        except (ValueError, TypeError):
-            return Response({'error': 'Invalid salary value'}, status=400)
-
-        # Find the employee by SSN
-        employee = Employee.objects.filter(ssn=ssn).first()
+        employee = Employee.objects.filter(pk=lookup.validated_data['ssn']).first()
         if not employee:
-            return Response({'error': 'Employee not found'}, status=404)
+            return Response(
+                {'error': 'Employee not found'}, status=status.HTTP_404_NOT_FOUND
+            )
 
-        # Use the serializer to validate and save the updated salary
-        employee.salary = new_salary
-        serializer = EmployeeSerializer(employee, data=request.data, partial=True)  # `partial=True` allows updating only certain fields
-
+        # The serializer validates and saves. validate_salary() rejects
+        # anything <= 0, so no manual Decimal parsing is needed here.
+        serializer = EmployeeSerializer(employee, data=request.data, partial=True)
         if serializer.is_valid():
-            serializer.save()  # Save the employee with the updated salary
+            serializer.save()
             return Response({'message': 'Employee salary updated successfully'}, status=200)
 
         return Response(serializer.errors, status=400)

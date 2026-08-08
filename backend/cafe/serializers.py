@@ -213,6 +213,37 @@ class RegisterSerializer(serializers.Serializer):
         return employee
 
 
+class RestockItemSerializer(serializers.Serializer):
+    """One line of a restocking purchase."""
+
+    name = serializers.CharField(max_length=255)
+    # min_value matters here. The old endpoint added whatever number arrived, so
+    # a negative quantity REMOVED stock through a restocking endpoint - and
+    # nothing checked, because the payload was read straight off request.data.
+    quantity = serializers.DecimalField(
+        max_digits=12, decimal_places=2, min_value=Decimal('0.01')
+    )
+
+
+class RestockSerializer(serializers.Serializer):
+    """The request body of PATCH /api/inventory/update/."""
+
+    order = RestockItemSerializer(many=True, allow_empty=False)
+
+
+class EmployeeLookupSerializer(serializers.Serializer):
+    """Validates the ?ssn= query parameter.
+
+    Rejecting a malformed SSN with a 400 before it reaches the database is
+    cheaper than catching whatever the ORM raises when a DecimalField primary
+    key is handed the string "abc".
+    """
+
+    ssn = serializers.RegexField(r'^\d{9}$', error_messages={
+        'invalid': 'SSN must be exactly 9 digits.',
+    })
+
+
 class SaleItemSerializer(serializers.Serializer):
     """One line of an order."""
 

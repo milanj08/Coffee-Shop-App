@@ -12,7 +12,7 @@ from decimal import Decimal
 from django.db import transaction
 from django.utils import timezone
 
-from .models import Accounting, InventoryManagement, Menu, Recipe, Sale
+from .models import Accounting, Employee, InventoryManagement, Menu, Recipe, Sale
 
 
 # --- Errors -----------------------------------------------------------------
@@ -37,6 +37,12 @@ class IngredientNotStocked(SaleError):
         super().__init__(
             f"Ingredient '{ingredient_name}' is required by a recipe but is not in inventory."
         )
+
+
+class EmployeeNotFound(Exception):
+    def __init__(self, ssn):
+        self.ssn = ssn
+        super().__init__(f"No employee with SSN {ssn}.")
 
 
 class InsufficientStock(SaleError):
@@ -169,3 +175,71 @@ def record_sale(items, payment_method):
     )
 
     return {'total': total, 'new_balance': new_balance}
+
+
+# --- Inventory ---------------------------------------------------------------
+
+@transaction.atomic
+def restock(items):
+    """Add purchased quantities to stock.
+
+    `items` is a list of {'name': str, 'quantity': Decimal}.
+
+    Previously this looped over the request body directly, adding whatever it
+    found with no transaction, no locking, and no validation - so a five-item
+    order that failed on the third left the first two applied, and a negative
+    quantity silently REMOVED stock through a restocking endpoint.
+
+    Raises IngredientNotStocked if any name has no inventory row.
+    """
+    # Total per ingredient first. The same item listed twice in one order
+    # should add up, not have the second entry overwrite the first.
+    required = defaultdict(Decimal)
+    for item in items:
+        required[item['name']] += item['quantity']
+
+    # Lock before reading the quantities we are about to add to, for the same
+    # reason record_sale does: two concurrent restocks would otherwise both
+    # read the old value and one would be lost.
+    rows = {
+        row.pk: row
+        for row in InventoryManagement.objects
+        .select_for_update()
+        .filter(pk__in=required.keys())
+    }
+
+    # Check everything before writing anything.
+    for name in required:
+        if name not in rows:
+            raise IngredientNotStocked(name)
+
+    for name, amount in required.items():
+        row = rows[name]
+        row.quantity += amount
+        row.save(update_fields=['quantity'])
+
+
+# --- Employees ---------------------------------------------------------------
+
+@transaction.atomic
+def delete_employee(ssn):
+    """Remove an employee and everything that represents them.
+
+    The old version deleted the Barista row and stopped. on_delete=CASCADE runs
+    Employee -> Barista, not the reverse, so the Employee row survived - and
+    once logins were added, so did the User and its auth token. The result was
+    a "deleted" employee who could still authenticate.
+
+    Deleting the Employee cascades to whichever of Barista/Manager exists.
+    Employee.user is SET_NULL, so the User has to be removed explicitly;
+    deleting it cascades to their token.
+    """
+    try:
+        employee = Employee.objects.get(pk=ssn)
+    except Employee.DoesNotExist:
+        raise EmployeeNotFound(ssn)
+
+    user = employee.user
+    employee.delete()
+    if user is not None:
+        user.delete()

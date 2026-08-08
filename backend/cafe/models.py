@@ -70,17 +70,32 @@ class InventoryManagement(models.Model):
 
 # --- Menu ---
 class Menu(models.Model):
+    """These rules used to live in a clean() method, which never ran.
+
+    Nothing calls full_clean() on its own - not save(), not objects.create(),
+    not DRF's serializer.save(). Only Django ModelForms do, and this project has
+    none. So `hot_cold: "lukewarm"` saved happily through the API for a year.
+
+    choices moves the constraint onto the field, where DRF turns it into a
+    ChoiceField and rejects bad values with a 400 before anything is written.
+    Sale.PaymentMethod already did this correctly; Menu just never got the same
+    treatment.
+    """
+
+    class DrinkType(models.TextChoices):
+        TEA = 'tea', 'Tea'
+        COFFEE = 'coffee', 'Coffee'
+        SOFT_DRINK = 'softdrink', 'Soft Drink'
+
+    class Temperature(models.TextChoices):
+        HOT = 'hot', 'Hot'
+        COLD = 'cold', 'Cold'
+
     name = models.CharField(max_length=30, primary_key=True)
     size = models.DecimalField(max_digits=5, decimal_places=2)
-    type = models.CharField(max_length=20)
+    type = models.CharField(max_length=20, choices=DrinkType.choices)
     price = models.DecimalField(max_digits=10, decimal_places=2)
-    hot_cold = models.CharField(max_length=4)
-
-    def clean(self):
-        if self.hot_cold not in ['hot', 'cold']:
-            raise ValidationError('hot_cold must be "hot" or "cold"')
-        if self.type not in ['tea', 'coffee', 'softdrink']:
-            raise ValidationError('type must be tea, coffee, or softdrink')
+    hot_cold = models.CharField(max_length=4, choices=Temperature.choices)
 
 # --- Promotions ---
 class Promotion(models.Model):

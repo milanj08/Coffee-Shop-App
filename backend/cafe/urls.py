@@ -38,8 +38,10 @@ urlpatterns = [
     path('accounting/', AccountingListCreateAPIView.as_view(), name='accounting'),
     path('recipes/', RecipeListCreateAPIView.as_view(), name='recipes'),
     path('inventory/update/', UpdateInventoryAPIView.as_view(), name='update-inventory'),
-    path('accounting/check/', CurrentBankAmountAPIView.as_view(), name='check-accounting'),
-    path('accounting/purchase/', CurrentBankAmountAPIView.as_view(), name='accounting-purchase'),
+    # One path, two methods: GET reads the balance, POST records a purchase
+    # against it. This used to be two URLs pointing at the same view, which is
+    # what a REST API has verbs for.
+    path('accounting/balance/', CurrentBankAmountAPIView.as_view(), name='accounting-balance'),
     path('sales/record-sale', RecordSaleAPIView.as_view(), name='record-sale'),
     path('employees/delete/', EmployeeDeleteAPIView.as_view(), name='employee-delete'),
     path('employees/update-salary/', UpdateSalaryAPIView.as_view(), name='update-salary'),
