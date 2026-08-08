@@ -1,6 +1,9 @@
 import React from 'react';
 import ReactDOM from 'react-dom/client';
 import App from './App';
+// Was never imported, so none of it applied - the app rendered in the browser's
+// default serif font with the default 8px body margin.
+import './index.css';
 
 const root = ReactDOM.createRoot(document.getElementById('root'));
 root.render(

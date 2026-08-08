@@ -29,7 +29,8 @@ export default function EditEmployee() {
         }
 
         try {
-            await api.put(
+            // PATCH, not PUT - this sends one field, not a whole employee.
+            await api.patch(
                 `${API_BASE_URL}employees/update-salary/?ssn=${encodeURIComponent(ssn)}`,
                 { salary }
             );

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate } from 'react-router-dom';
-import api from '../api';
+import api, { readApiError } from '../api';
 import './managerHome';
 import './inventory.css';
 import { API_BASE_URL } from '../config';
@@ -65,27 +65,37 @@ const Inventory = () => {
     };
 
     const handleOrder = async () => {
-        // Saving the items we want to order and how many into orderItems
-        const orderItems = order.map(item => ({
-            name: item.name,
-            quantity: item.quantity
-        }));
-    
+        // Zero-quantity lines are dropped here rather than sent. The Add button
+        // will happily queue an item whose counter is still 0, and the restock
+        // endpoint now rejects a quantity below 0.01 - so one stray line would
+        // fail the whole order.
+        const orderItems = order
+            .filter(item => Number(item.quantity) > 0)
+            .map(item => ({ name: item.name, quantity: item.quantity }));
+
+        if (orderItems.length === 0) {
+            alert('Add at least one item with a quantity above zero.');
+            return;
+        }
+
         try {
             // Add the purchased quantities to stock
             await api.patch(`${API_BASE_URL}inventory/update/`, { order: orderItems });
 
             // Then deduct what it cost from the account balance
-            await api.post(`${API_BASE_URL}accounting/purchase/`, { total_purchase: total });
+            await api.post(`${API_BASE_URL}accounting/balance/`, { total_purchase: total });
 
             // Refresh our inventory and balance to reflect our purchase
             await fetchInventory(); 
             await fetchAccountBalance();
 
             // Clears current order
-            setOrder([]);            
+            setOrder([]);
         } catch (error) {
             console.error("Error updating inventory:", error);
+            // Was console.error only, so a rejected order looked like a click
+            // that did nothing.
+            alert(readApiError(error, 'Failed to place the order.'));
         }
     };
     
@@ -103,7 +113,7 @@ const Inventory = () => {
 
     const fetchAccountBalance = async () => {
         try {
-            const response = await api.get(`${API_BASE_URL}accounting/check/`);
+            const response = await api.get(`${API_BASE_URL}accounting/balance/`);
             setAccountBalance(response.data.account_balance);
         } catch (error) {
             console.error("Failed to fetch account balance:", error);
