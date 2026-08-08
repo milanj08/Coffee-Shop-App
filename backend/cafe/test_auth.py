@@ -222,3 +222,197 @@ class RegistrationTests(AuthTestBase):
 
         self.assertEqual(Employee.objects.count(), before)
         self.assertFalse(User.objects.filter(username='newhire').exists())
+
+
+class RestockTests(AuthTestBase):
+    """PATCH /api/inventory/update/ - adding purchased stock."""
+
+    def setUp(self):
+        super().setUp()
+        self.milk = InventoryManagement.objects.create(
+            name='Milk', unit='ml', quantity=Decimal('1000'), price=Decimal('3.50')
+        )
+        self.login('the_manager')
+
+    def test_adds_to_stock(self):
+        response = self.client.patch('/api/inventory/update/', {
+            'order': [{'name': 'Milk', 'quantity': '500.00'}],
+        }, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.milk.refresh_from_db()
+        self.assertEqual(self.milk.quantity, Decimal('1500'))
+
+    def test_negative_quantity_is_rejected(self):
+        """A restocking endpoint that accepts -500 removes stock."""
+        response = self.client.patch('/api/inventory/update/', {
+            'order': [{'name': 'Milk', 'quantity': '-500.00'}],
+        }, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.milk.refresh_from_db()
+        self.assertEqual(self.milk.quantity, Decimal('1000'))
+
+    def test_unknown_item_returns_404_and_writes_nothing(self):
+        """Used to return 200 with an error string, after applying earlier items."""
+        response = self.client.patch('/api/inventory/update/', {
+            'order': [
+                {'name': 'Milk', 'quantity': '500.00'},
+                {'name': 'Unobtainium', 'quantity': '1.00'},
+            ],
+        }, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+        self.milk.refresh_from_db()
+        self.assertEqual(self.milk.quantity, Decimal('1000'))
+
+    def test_malformed_payload_is_rejected(self):
+        response = self.client.patch('/api/inventory/update/', {'order': []}, format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class EmployeeDeleteTests(AuthTestBase):
+    """DELETE /api/employees/delete/?ssn=..."""
+
+    def setUp(self):
+        super().setUp()
+        self.login('the_manager')
+
+    def test_deleting_an_employee_removes_their_login_too(self):
+        """The old version deleted the Barista row and left the Employee, the
+        User, and the auth token - so a "deleted" employee could still sign in."""
+        response = self.client.delete('/api/employees/delete/?ssn=222222222')
+
+        self.assertEqual(response.status_code, status.HTTP_204_NO_CONTENT)
+        self.assertFalse(Employee.objects.filter(pk=Decimal('222222222')).exists())
+        self.assertFalse(Barista.objects.filter(pk=Decimal('222222222')).exists())
+        self.assertFalse(User.objects.filter(username='the_barista').exists())
+
+    def test_deleted_employee_can_no_longer_authenticate(self):
+        login = self.client.post('/api/auth/login/', {
+            'username': 'the_barista', 'password': 'CoffeeShop2026',
+        }, format='json')
+        barista_token = login.data['token']
+
+        self.login('the_manager')
+        self.client.delete('/api/employees/delete/?ssn=222222222')
+
+        self.client.credentials(HTTP_AUTHORIZATION=f'Token {barista_token}')
+        self.assertEqual(
+            self.client.get('/api/auth/me/').status_code,
+            status.HTTP_401_UNAUTHORIZED,
+        )
+
+    def test_unknown_ssn_returns_404(self):
+        response = self.client.delete('/api/employees/delete/?ssn=999999999')
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+    def test_malformed_ssn_returns_400(self):
+        response = self.client.delete('/api/employees/delete/?ssn=abc')
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+
+class MenuChoicesTests(AuthTestBase):
+    """Menu.clean() never ran, so these values used to save happily."""
+
+    def setUp(self):
+        super().setUp()
+        self.login('the_manager')
+
+    def payload(self, **overrides):
+        data = {
+            'name': 'Flat White', 'size': '250.00', 'type': 'coffee',
+            'price': '4.75', 'hot_cold': 'hot',
+        }
+        data.update(overrides)
+        return data
+
+    def test_valid_drink_is_accepted(self):
+        response = self.client.post('/api/menu/', self.payload(), format='json')
+
+        self.assertEqual(response.status_code, status.HTTP_201_CREATED, response.data)
+
+    def test_invalid_temperature_is_rejected(self):
+        response = self.client.post(
+            '/api/menu/', self.payload(hot_cold='luke'), format='json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('hot_cold', response.data)
+        self.assertFalse(Menu.objects.filter(name='Flat White').exists())
+
+    def test_invalid_type_is_rejected(self):
+        response = self.client.post(
+            '/api/menu/', self.payload(type='soup'), format='json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+        self.assertIn('type', response.data)
+
+
+class UpdateSalaryTests(AuthTestBase):
+    def setUp(self):
+        super().setUp()
+        self.login('the_manager')
+
+    def test_patch_updates_the_salary(self):
+        response = self.client.patch(
+            '/api/employees/update-salary/?ssn=222222222',
+            {'salary': '35000.00'}, format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK, response.data)
+        self.assertEqual(
+            Employee.objects.get(pk=Decimal('222222222')).salary, Decimal('35000.00')
+        )
+
+    def test_zero_salary_is_rejected(self):
+        """EmployeeSerializer.validate_salary requires a value above 0."""
+        response = self.client.patch(
+            '/api/employees/update-salary/?ssn=222222222',
+            {'salary': '0.00'}, format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_unknown_ssn_returns_404(self):
+        response = self.client.patch(
+            '/api/employees/update-salary/?ssn=999999999',
+            {'salary': '1.00'}, format='json',
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_404_NOT_FOUND)
+
+
+class AccountingBalanceTests(AuthTestBase):
+    def setUp(self):
+        super().setUp()
+        Accounting.objects.create(
+            day='2026-08-06', time='09:00:00', account_balance=Decimal('500.00')
+        )
+        self.login('the_manager')
+
+    def test_get_reads_the_balance(self):
+        response = self.client.get('/api/accounting/balance/')
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['account_balance'], '500.00')
+
+    def test_post_records_a_purchase(self):
+        """One path, two verbs. This used to be two URLs on the same view."""
+        response = self.client.post(
+            '/api/accounting/balance/', {'total_purchase': '100.00'}, format='json'
+        )
+
+        self.assertEqual(response.status_code, status.HTTP_200_OK)
+        self.assertEqual(response.data['new_balance'], '400.00')
+
+    def test_barista_cannot_read_the_balance(self):
+        self.login('the_barista')
+
+        response = self.client.get('/api/accounting/balance/')
+
+        self.assertEqual(response.status_code, status.HTTP_403_FORBIDDEN)
